@@ -3,6 +3,8 @@
 
 #include "read_data.hpp"
 #include "polar.hpp"
+#include "/Users/Kianusch/Documents/Numerical_analysis/auxiliary_files/storage.hpp"
+#include "/Users/Kianusch/Documents/Numerical_analysis/auxiliary_files/vector.hpp"
 #include <algorithm>
 
 template <class REAL>
@@ -19,13 +21,54 @@ public:
 	, profiles_(0)
 	{}
 
+	// function to generate the filename of data file k
+	std::string get_filename(std::string filename_begin, std::string fileformat, size_type k, size_type n_files)
+	{
+		std::string filename = filename_begin;
+		
+		// Step 1: Determine the number of digits to display string number
+		size_type n_digits = log(1.0*(n_files-1))/log(10.) + 1;
+		
+		// Step 2: Determine the number of leading zeros needed
+		size_type n_digits_index;
+		if (k == 0)
+		{
+			n_digits_index = 1;
+		}
+		else
+		{
+			n_digits_index = log(1.0*k)/log(10.) + 1;
+		}
+		size_type leading_zeros = n_digits - n_digits_index;
+		
+		// Step 3: Create file name
+		for (size_type i = 0; i < leading_zeros; ++i)
+		{
+			filename += "0";
+		}
+		filename += std::to_string(k);
+		filename += fileformat;
+		return filename;
+	}
 
-	// read in a data file
+	// read in single file
 	void read_in(std::string filename)
 	{
 		Matrix<number_type> data(grid_size_, grid_size_);
 		read_data(filename, data, 8);
 		profiles_.push_back(data);
+	}
+
+	// read in data files
+	void read_in(std::string filename_begin, std::string fileformat, size_type n_files)
+	{
+		for (size_type k = 0; k < n_files; ++k)
+		{
+			std::string filename = get_filename(filename_begin, fileformat, k, n_files);
+			Matrix<number_type> data(grid_size_, grid_size_);
+			read_data(filename, data, 8);
+			profiles_.push_back(data);
+		}
 	}
 
 	// normalize matrix data (integral = 1)
@@ -123,6 +166,25 @@ public:
 		return r*sin(phi);
 	}
 
+	// methods to integrate over phi (trapezoid rule) the profil k
+	number_type integ_phi(size_type k, number_type r, number_type phi_lower, number_type phi_upper)
+	{
+		size_type N = grid_size_;
+		number_type h = (phi_upper - phi_lower)/N;
+		number_type integral = interpolate(k, to_x(r, phi_lower), to_y(r, phi_lower));
+		integral += interpolate(k, to_x(r, phi_upper), to_y(r, phi_upper));
+		integral *= 0.5;
+		for (size_type l = 1; l < N; ++l)
+		{
+			number_type phi = phi_lower + h*l;
+			integral += interpolate(k, to_x(r, phi), to_y(r, phi));
+		}
+		integral *= h;
+
+		return integral;
+
+	}
+
 	// interpolate energy density profil i at position (x,y)
 	// now: bilinear interpolation
 	number_type interpolate(size_type k, number_type x, number_type y) const
@@ -179,13 +241,27 @@ public:
 	}
 
 
-	// average over azimuthal angle, result (r_i, <E_i>, error)
-	void average_azimuthal()
+	// average over azimuthal angle save to data storage
+	void average_azimuthal(Vector<number_type> & radii, Vector<number_type> & mean_vec, Vector<number_type> & mean_error)
 	{
+		size_type N = mean_vec.size();
+		Storage<number_type> profiles_averaged(1);
 		for (size_type k = 0; k < profiles_.size(); ++k)
 		{
-			//
+			number_type R = grid_max_-1;
+			for (size_type l = 0; l < N; ++l)
+			{
+				number_type r = number_type(l)/N*R;
+				if (k == 0)
+				{
+					radii[l] = r;
+				}
+				number_type e_average = integ_phi(k, r, 0., 2.*3.1415926)/(2.*3.1415926);
+				profiles_averaged.read_in(e_average);
+			}
 		}
+		profiles_averaged.set_n_variables(radii.size());
+		profiles_averaged.mean(mean_vec, mean_error, false);
 	}
 
 	// print data matrix k
@@ -210,6 +286,8 @@ private:
 	size_type grid_size_;
 	// vector of energy density profiles
 	std::vector<Matrix<number_type>> profiles_;
+
+
 
 
 };
