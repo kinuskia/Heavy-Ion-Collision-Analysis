@@ -1,6 +1,7 @@
 *.pdf
 *.out
 *.txt
+*.dat
 *.mw
 
 # TeX/LaTeX intermediates # 

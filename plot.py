@@ -1,16 +1,16 @@
 import matplotlib.pyplot as plt 
 import numpy as np 
 
-r0, e0, de0 = np.loadtxt("energies_averaged00.txt", unpack=True)
-r1, e1, de1 = np.loadtxt("energies_averaged02.txt", unpack=True)
-r2, e2, de2 = np.loadtxt("energies_averaged04.txt", unpack=True)
-r3, e3, de3 = np.loadtxt("energies_averaged05.txt", unpack=True)
-r4, e4, de4 = np.loadtxt("energies_averaged06.txt", unpack=True)
-r5, e5, de5 = np.loadtxt("energies_averaged07.txt", unpack=True)
-r6, e6, de6 = np.loadtxt("energies_averaged08.txt", unpack=True)
-r7, e7, de7 = np.loadtxt("energies_averaged09.txt", unpack=True)
-r8, e8, de8 = np.loadtxt("energies_averaged10.txt", unpack=True)
-r9, e9, de9 = np.loadtxt("energies_averaged11.txt", unpack=True)
+r0, e0, de0 = np.loadtxt("output/energies_averaged00.txt", unpack=True)
+r1, e1, de1 = np.loadtxt("output/energies_averaged02.txt", unpack=True)
+r2, e2, de2 = np.loadtxt("output/energies_averaged04.txt", unpack=True)
+r3, e3, de3 = np.loadtxt("output/energies_averaged05.txt", unpack=True)
+r4, e4, de4 = np.loadtxt("output/energies_averaged06.txt", unpack=True)
+r5, e5, de5 = np.loadtxt("output/energies_averaged07.txt", unpack=True)
+r6, e6, de6 = np.loadtxt("output/energies_averaged08.txt", unpack=True)
+r7, e7, de7 = np.loadtxt("output/energies_averaged09.txt", unpack=True)
+r8, e8, de8 = np.loadtxt("output/energies_averaged10.txt", unpack=True)
+r9, e9, de9 = np.loadtxt("output/energies_averaged11.txt", unpack=True)
 
 
 plt.plot(r0, e0+de0, linewidth = 0.5, color = "blue")
@@ -48,4 +48,4 @@ plt.fill_between(r9, e9+de9, e9-de9, color = "cyan", label="$b = $11 fm")
 plt.xlabel("$r$ [fm]")
 plt.ylabel("normalized energy density")
 plt.legend(loc = "best")
-plt.savefig("energy-r.pdf", format="pdf", bbox_inches="tight")
+plt.savefig("plots/energy-r.pdf", format="pdf", bbox_inches="tight")

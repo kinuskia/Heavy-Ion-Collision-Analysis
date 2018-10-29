@@ -2,7 +2,6 @@
 #define COLLISION_HPP
 
 #include "read_data.hpp"
-#include "polar.hpp"
 #include "/Users/Kianusch/Documents/Numerical_analysis/auxiliary_files/storage.hpp"
 #include "/Users/Kianusch/Documents/Numerical_analysis/auxiliary_files/vector.hpp"
 #include <algorithm>
