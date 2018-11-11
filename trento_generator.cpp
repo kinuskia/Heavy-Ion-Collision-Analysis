@@ -10,11 +10,11 @@ void generate_trento_script(std::string impact_parameter, std::string filename)
 		// Specify the projectile option twice
 		outfile << "projectile = Pb" << "\n";
 		outfile << "projectile = Pb" << "\n";
-		outfile << "number-events = 1000" << "\n";
+		outfile << "number-events = 10000" << "\n";
 
 		// don't print event properties to stdout, save to text file
 		outfile << "quiet = true" << "\n";
-		outfile << "output = /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Analysis/Trento/PbPb";
+		outfile << "output = /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion-Collision-Analysis/Trento/PbPb";
 		outfile << impact_parameter << "\n";
 
 		outfile << "reduced-thickness = 0" << "\n";

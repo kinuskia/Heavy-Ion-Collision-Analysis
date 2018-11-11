@@ -1,6 +1,5 @@
+
 #include "auxiliary/headers.hpp"
-
-
 
 
 
