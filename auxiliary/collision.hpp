@@ -99,11 +99,11 @@ public:
 
 
 			// initialize interpolation
-	void initialize_interpolation()
+	void initialize_interpolation(const gsl_interp2d_type* interp_method)
 	{
 		for (size_type k = 0; k < profiles_.size(); ++k)
 		{
-			const gsl_interp2d_type* interpolator = gsl_interp2d_bilinear;
+			const gsl_interp2d_type* interpolator = interp_method;
 			interpolators_.push_back(interpolator);
 			number_type* za = new number_type[grid_size_*grid_size_];
 			z_profiles_.push_back(za);

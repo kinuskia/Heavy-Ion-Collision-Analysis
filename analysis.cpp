@@ -27,7 +27,9 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	PbPb.centralize(); // shift data so that barycentre at origin
 
-	PbPb.initialize_interpolation(); // initialize objects needed for interpolation
+	// set interpolation method: gsl_interp2d_bicubic or gsl_interp2d_bilinear
+	const gsl_interp2d_type* interpolation_method = gsl_interp2d_bicubic;
+	PbPb.initialize_interpolation(interpolation_method); // initialize objects needed for interpolation
 
 
 	// compute phi-averaged energy density profile and save to text file
