@@ -1,36 +1,45 @@
 #ifndef TO_FILE_HPP
 #define TO_FILE_HPP
+#include <gsl/gsl_vector.h>
+#include <vector>
+#include <fstream>
+#include <iomanip>
 
-// Function which takes an STL vector of Vector-columns and writes them to a text file
-template<typename number_type>
-void to_file(std::string filename, std::vector<Vector<number_type>> data_columns)
+// Function which takes an GSL vector of Vector-columns and writes them to a text file
+
+void to_file(std::string filename, std::vector<gsl_vector*> data_columns)
 {
-	// using the Storage object from my numerical_analysis library
-	Storage<number_type> data(data_columns.size());
-	for (size_type i = 0; i < data_columns[0].size(); ++i)
+	typedef double number_type;
+	std::ofstream outfile(filename);
+	for (size_type i = 0; i < data_columns[0]->size; ++i)
 	{
 		for (size_type j = 0; j < data_columns.size(); ++j)
 		{
-			if (isnan((data_columns[j])[i]))
+			number_type value = gsl_vector_get(data_columns[j], i);
+			if (isnan(value))
 			{
-				data.read_in(0);
+				outfile << 0;
 			}
-			else
+			else 
 			{
-				data.read_in((data_columns[j])[i]);
+				outfile << std::setprecision(14) << value;
+			}
+			if (j < data_columns.size()-1)
+			{
+				outfile << " ";
 			}
 		}
-	}
-	data.write(filename, false);
+		outfile << "\n";
+	}	
 }
 // overloaded function for the special case of three columns
-template<typename number_type>
-void to_file(std::string filename, Vector<number_type> r, Vector<number_type> E, Vector<number_type> dE)
+void to_file(std::string filename, gsl_vector* r, gsl_vector* E, gsl_vector* dE)
 {
-	std::vector<Vector<number_type>> columns(3);
-	columns[0] = r;
-	columns[1] = E;
-	columns[2] = dE;
+	typedef double number_type;
+	std::vector<gsl_vector*> columns(0);
+	columns.push_back(r);
+	columns.push_back(E);
+	columns.push_back(dE);
 	to_file(filename, columns);
 }
 

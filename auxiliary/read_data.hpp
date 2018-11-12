@@ -2,26 +2,26 @@
 #define READ_DATA_HPP
 
 #include <fstream>
-#include "/Users/Kianusch/Documents/Numerical_analysis/auxiliary_files/vector.hpp"
-#include "/Users/Kianusch/Documents/Numerical_analysis/auxiliary_files/matrix.hpp"
+#include <gsl/gsl_matrix.h>
 
 typedef std::size_t size_type;
 /* free functions to read in a data file and save it in a matrix */
 
 template<typename number_type>
-void insert(number_type number, size_type counter, Matrix<number_type> & data)
+void insert(number_type number, size_type counter, gsl_matrix* data)
 {
-	size_type n_cols = data.colsize();
+	size_type n_cols = data->size2;
 	size_type rownumber = counter/n_cols;
 	size_type colnumber = counter%n_cols;
-	assert(data.colsize() == data.rowsize());
+	assert(data->size1 == data->size2);
 	
-	data(rownumber, colnumber) = number;
+	gsl_matrix_set(data, rownumber, colnumber, number);
 }
 
-template<typename number_type>
-void read_data(std::string filename, Matrix<number_type> & data, size_type skip_rows = 0)
+
+void read_data(std::string filename, gsl_matrix* data, size_type skip_rows = 0)
 {
+	typedef double number_type;
 	std::ifstream infile(filename);
 	std::string line;
 

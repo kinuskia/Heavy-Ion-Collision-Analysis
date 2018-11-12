@@ -1,9 +1,10 @@
 #ifndef COLLISION_HPP
 #define COLLISION_HPP
 
+#include <vector>
 #include "read_data.hpp"
-#include "/Users/Kianusch/Documents/Numerical_analysis/auxiliary_files/storage.hpp"
-#include "/Users/Kianusch/Documents/Numerical_analysis/auxiliary_files/vector.hpp"
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_matrix.h>
 #include <algorithm>
 
 template <class REAL>
@@ -17,7 +18,7 @@ public:
 	: grid_max_(grid_max)
 	, grid_step_(grid_step)
 	, grid_size_(size_type(2.*grid_max/grid_step))
-	, profiles_(0)
+	, profiles_(0) 
 	{}
 
 	// function to generate the filename of data file k
@@ -53,9 +54,19 @@ public:
 	// read in single file
 	void read_in(std::string filename)
 	{
-		Matrix<number_type> data(grid_size_, grid_size_);
+		// CRITICAL POINT !!!! (Variable dims)
+		gsl_matrix* data = gsl_matrix_alloc(grid_size_, grid_size_);
 		read_data(filename, data, 8);
 		profiles_.push_back(data);
+	}
+
+	// free profiles
+	void free()
+	{
+		for (size_type i = 0; i < profiles_.size(); ++i)
+		{
+			gsl_matrix_free(profiles_[i]);
+		}
 	}
 
 	// read in data files
@@ -64,7 +75,7 @@ public:
 		for (size_type k = 0; k < n_files; ++k)
 		{
 			std::string filename = get_filename(filename_begin, fileformat, k, n_files);
-			Matrix<number_type> data(grid_size_, grid_size_);
+			gsl_matrix* data = gsl_matrix_alloc(grid_size_, grid_size_);
 			read_data(filename, data, 8);
 			profiles_.push_back(data);
 		}
@@ -77,22 +88,17 @@ public:
 		{
 			// compute total energy
 			number_type sum = 0;
-			for (size_type i = 0; i < profiles_[k].rowsize(); ++i)
+			for (size_type i = 0; i < profiles_[k]->size1; ++i)
 			{
-				for (size_type j = 0; j < profiles_[k].colsize(); ++j)
+				for (size_type j = 0; j < profiles_[k]->size2; ++j)
 				{
-					sum += profiles_[k](i, j);
+					sum += gsl_matrix_get(profiles_[k], i, j);
 				}
 			}
 			sum *= grid_step_*grid_step_;
+			
 			// rescale
-			for (size_type i = 0; i < profiles_[k].rowsize(); ++i)
-			{
-				for (size_type j = 0; j < profiles_[k].colsize(); ++j)
-				{
-					profiles_[k](i, j) *= energy/sum;
-				}
-			}
+			gsl_matrix_scale(profiles_[k], energy/sum);
 		}
 	}
 
@@ -104,14 +110,14 @@ public:
 			// compute barycentre
 			number_type x_bary = 0;
 			number_type y_bary = 0;
-			for (size_type i = 0; i < profiles_[k].rowsize(); ++i)
+			for (size_type i = 0; i < profiles_[k]->size1; ++i)
 			{
-				for (size_type j = 0; j < profiles_[k].colsize(); ++j)
+				for (size_type j = 0; j < profiles_[k]->size2; ++j)
 				{
 					number_type x = j;
 					number_type y = i;
-					x_bary += profiles_[k](i, j)*x;
-					y_bary += profiles_[k](i, j)*y;
+					x_bary += gsl_matrix_get(profiles_[k], i, j)*x;
+					y_bary += gsl_matrix_get(profiles_[k], i, j)*y;
 				}
 			}
 			x_bary *= grid_step_*grid_step_;
@@ -119,28 +125,30 @@ public:
 
 
 			// make temporary copy
-			Matrix<number_type> m_copy = profiles_[k];
+			gsl_matrix* m_copy = gsl_matrix_alloc(profiles_[k]->size1, profiles_[k]->size2);
+			gsl_matrix_memcpy(m_copy, profiles_[k]);
 
 			// center the barycentre
-			int dx = round((1.0*m_copy.colsize()-1)/2-x_bary);
-			int dy = round((1.0*m_copy.rowsize()-1)/2-y_bary);
+			int dx = round((1.0*m_copy->size2-1)/2-x_bary);
+			int dy = round((1.0*m_copy->size1-1)/2-y_bary);
 			//std::cout << "x: " << xB << " y: " << yB << "\n";
 			
-			for (int i = 0; i < m_copy.rowsize(); ++i)
+			for (int i = 0; i < m_copy->size1; ++i)
 			{
-				for (int j = 0; j < m_copy.colsize(); ++j)
+				for (int j = 0; j < m_copy->size2; ++j)
 				{
 					// deal with out-of bound indices
-					if (i-dy < 0 || j-dx < 0 || i-dy >= m_copy.colsize() || j-dx >= m_copy.rowsize())
+					if (i-dy < 0 || j-dx < 0 || i-dy >= m_copy->size2 || j-dx >= m_copy->size1)
 					{
-						profiles_[k](i, j) = 0;
+						gsl_matrix_set(profiles_[k], i, j, 0.);
 					}
 					else
 					{
-						profiles_[k](i, j) = m_copy(i-dy, j-dx);
+						gsl_matrix_set(profiles_[k], i, j, gsl_matrix_get(m_copy, i-dy, j-dx));
 					}
 				}
 			}
+			gsl_matrix_free(m_copy);
 		}
 	}
 
@@ -201,7 +209,7 @@ public:
 		number_type yB;
 		size_type I;
 		size_type J;
-		for (size_type i = 0; i < profiles_[k].rowsize(); ++i)
+		for (size_type i = 0; i < profiles_[k]->size1; ++i)
 		{
 			number_type Y = y_from_index(i);
 			if (Y < y)
@@ -212,7 +220,7 @@ public:
 				break;
 			}
 		}
-		for (size_type j = 0; j < profiles_[k].colsize(); ++j)
+		for (size_type j = 0; j < profiles_[k]->size2; ++j)
 		{
 			number_type X = x_from_index(j);
 			if (X > x)
@@ -224,10 +232,10 @@ public:
 			}
 
 		}
-		e1 = profiles_[k](I+1, J);
-		e2 = profiles_[k](I+1, J+1);
-		e3 = profiles_[k](I, J+1);
-		e4 = profiles_[k](I, J);
+		e1 = gsl_matrix_get(profiles_[k], I+1, J);
+		e2 = gsl_matrix_get(profiles_[k], I+1, J+1);
+		e3 = gsl_matrix_get(profiles_[k], I, J+1);
+		e4 = gsl_matrix_get(profiles_[k], I, J);
 
 		// Step 2: Estimate energy density at (x,y)
 		// relative coordinates (t,u) with respect to the grid square
@@ -241,37 +249,48 @@ public:
 
 
 	// average over azimuthal angle save to data storage
-	void average_azimuthal(Vector<number_type> & radii, Vector<number_type> & mean_vec, Vector<number_type> & mean_error)
+	void average_azimuthal(gsl_vector* radii, gsl_vector* mean_vec, gsl_vector* mean_error)
 	{
-		size_type N = mean_vec.size();
-		Storage<number_type> profiles_averaged(1);
-		for (size_type k = 0; k < profiles_.size(); ++k)
+		size_type N = radii->size;
+
+		// For each profile compute e_average as function of r
+		number_type R = grid_max_-1;
+		for (size_type l = 0; l < N; ++l) // loop over radii
 		{
-			number_type R = grid_max_-1;
-			for (size_type l = 0; l < N; ++l)
+			number_type r = number_type(l)/N*R;
+			gsl_vector* e_ensemble = gsl_vector_alloc(profiles_.size());
+			for (size_type k = 0; k < profiles_.size(); ++k) // loop over profiles
 			{
-				number_type r = number_type(l)/N*R;
 				if (k == 0)
 				{
-					radii[l] = r;
+					gsl_vector_set(radii, l, r);
 				}
+				
 				number_type e_average = integ_phi(k, r, 0., 2.*3.1415926)/(2.*3.1415926);
-				profiles_averaged.read_in(e_average);
+
+				gsl_vector_set(e_ensemble, k, e_average);
 			}
+			// Compute mean and uncertainty of the fluctuations
+			number_type e_mean;
+			number_type e_err;
+			mean(e_ensemble, e_mean, e_err);
+			gsl_vector_set(mean_vec, l, e_mean);
+			gsl_vector_set(mean_error, l, e_err);
+
+			gsl_vector_free(e_ensemble);
 		}
-		profiles_averaged.set_n_variables(radii.size());
-		profiles_averaged.mean(mean_vec, mean_error, false);
+
 	}
 
 	// print data matrix k
 	void print(size_type k) const
 	{
 		assert(k < profiles_.size());
-		for (size_type i = 0; i < profiles_[k].rowsize(); ++i)
+		for (size_type i = 0; i < profiles_[k]->size1; ++i)
 		{
-			for (size_type j = 0; j < profiles_[k].colsize(); ++j)
+			for (size_type j = 0; j < profiles_[k]->size2; ++j)
 			{
-				std::cout << profiles_[k](i, j) << " ";
+				std::cout << gsl_matrix_get(profiles_[k], i, j) << " ";
 			}
 			std::cout << "\n";
 		}
@@ -284,8 +303,7 @@ private:
 	number_type grid_step_;
 	size_type grid_size_;
 	// vector of energy density profiles
-	std::vector<Matrix<number_type>> profiles_;
-
+	std::vector<gsl_matrix*> profiles_;
 
 
 
