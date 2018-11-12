@@ -27,6 +27,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	PbPb.centralize(); // shift data so that barycentre at origin
 
+	PbPb.initialize_interpolation(); // initialize objects needed for interpolation
+
 
 	// compute phi-averaged energy density profile and save to text file
 	gsl_vector* radii = gsl_vector_alloc(500); // compute energy density for 500 radii between 0 and grid_max-1fm

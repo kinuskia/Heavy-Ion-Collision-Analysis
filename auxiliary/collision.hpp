@@ -5,6 +5,9 @@
 #include "read_data.hpp"
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_interp2d.h>
+#include <gsl/gsl_spline2d.h>
 #include <algorithm>
 
 template <class REAL>
@@ -18,8 +21,22 @@ public:
 	: grid_max_(grid_max)
 	, grid_step_(grid_step)
 	, grid_size_(size_type(2.*grid_max/grid_step))
-	, profiles_(0) 
-	{}
+	, profiles_(0)
+	, z_profiles_(0)
+	, interpolators_(0)
+	, splines_(0)
+	, xacc_(0)
+	, yacc_(0) 
+	{
+		// initialize grid sites
+		x_sites_ = new number_type[grid_size_];
+		y_sites_ = new number_type[grid_size_];
+		for (size_type i = 0; i < grid_size_; ++i)
+		{
+			x_sites_[i] = x_from_index(i);
+			y_sites_[i] = -y_from_index(i);
+		}
+	}
 
 	// function to generate the filename of data file k
 	std::string get_filename(std::string filename_begin, std::string fileformat, size_type k, size_type n_files)
@@ -54,7 +71,6 @@ public:
 	// read in single file
 	void read_in(std::string filename)
 	{
-		// CRITICAL POINT !!!! (Variable dims)
 		gsl_matrix* data = gsl_matrix_alloc(grid_size_, grid_size_);
 		read_data(filename, data, 8);
 		profiles_.push_back(data);
@@ -78,6 +94,34 @@ public:
 			gsl_matrix* data = gsl_matrix_alloc(grid_size_, grid_size_);
 			read_data(filename, data, 8);
 			profiles_.push_back(data);
+		}
+	}
+
+
+			// initialize interpolation
+	void initialize_interpolation()
+	{
+		for (size_type k = 0; k < profiles_.size(); ++k)
+		{
+			const gsl_interp2d_type* interpolator = gsl_interp2d_bilinear;
+			interpolators_.push_back(interpolator);
+			number_type* za = new number_type[grid_size_*grid_size_];
+			z_profiles_.push_back(za);
+			gsl_spline2d* spline = gsl_spline2d_alloc(interpolators_[k], grid_size_, grid_size_);
+			splines_.push_back(spline);
+			gsl_interp_accel* xacc = gsl_interp_accel_alloc();
+			gsl_interp_accel* yacc = gsl_interp_accel_alloc();
+			xacc_.push_back(xacc);
+			yacc_.push_back(yacc);
+			// set interpolation grid values
+			for (size_type i = 0; i < grid_size_; ++i)
+			{
+				for (size_type j = 0; j < grid_size_; ++j)
+				{
+					gsl_spline2d_set(splines_[k], z_profiles_[k], i, j, gsl_matrix_get(profiles_[k], grid_size_ -1 - i, j));
+				}
+			}
+			gsl_spline2d_init(splines_[k], x_sites_, y_sites_, z_profiles_[k], grid_size_, grid_size_);
 		}
 	}
 
@@ -192,59 +236,64 @@ public:
 
 	}
 
-	// interpolate energy density profil i at position (x,y)
-	// now: bilinear interpolation
+	// // interpolate energy density profil i at position (x,y)
+	// // now: bilinear interpolation
+	// number_type interpolate(size_type k, number_type x, number_type y) const
+	// {
+	// 	// Step 1: Find the grid square of (x,y), meaning the four tabulated
+	// 	// points that surround (x,y): (I,J) -> (I+1, J+1)
+	// 	// Let us enumerate the four points counter-clockwise from the lower left
+	// 	number_type e1;
+	// 	number_type e2;
+	// 	number_type e3;
+	// 	number_type e4;
+	// 	number_type xL;
+	// 	number_type xR;
+	// 	number_type yT;
+	// 	number_type yB;
+	// 	size_type I;
+	// 	size_type J;
+	// 	for (size_type i = 0; i < profiles_[k]->size1; ++i)
+	// 	{
+	// 		number_type Y = y_from_index(i);
+	// 		if (Y < y)
+	// 		{
+	// 			yB = Y;
+	// 			yT = Y+grid_step_;
+	// 			I = i-1;
+	// 			break;
+	// 		}
+	// 	}
+	// 	for (size_type j = 0; j < profiles_[k]->size2; ++j)
+	// 	{
+	// 		number_type X = x_from_index(j);
+	// 		if (X > x)
+	// 		{
+	// 			xR = X;
+	// 			xL = X-grid_step_;
+	// 			J = j-1;
+	// 			break;
+	// 		}
+
+	// 	}
+	// 	e1 = gsl_matrix_get(profiles_[k], I+1, J);
+	// 	e2 = gsl_matrix_get(profiles_[k], I+1, J+1);
+	// 	e3 = gsl_matrix_get(profiles_[k], I, J+1);
+	// 	e4 = gsl_matrix_get(profiles_[k], I, J);
+
+	// 	// Step 2: Estimate energy density at (x,y)
+	// 	// relative coordinates (t,u) with respect to the grid square
+	// 	number_type t = (x-xL)/grid_step_;
+	// 	number_type u = (y-yB)/grid_step_;
+
+	// 	number_type energy = e1*(1.-t)*(1.-u)+e2*(t)*(1.-u)+e3*(t)*(u)+e4*(1.-t)*(u);
+
+	// 	return energy;
+	// }
+
 	number_type interpolate(size_type k, number_type x, number_type y) const
 	{
-		// Step 1: Find the grid square of (x,y), meaning the four tabulated
-		// points that surround (x,y): (I,J) -> (I+1, J+1)
-		// Let us enumerate the four points counter-clockwise from the lower left
-		number_type e1;
-		number_type e2;
-		number_type e3;
-		number_type e4;
-		number_type xL;
-		number_type xR;
-		number_type yT;
-		number_type yB;
-		size_type I;
-		size_type J;
-		for (size_type i = 0; i < profiles_[k]->size1; ++i)
-		{
-			number_type Y = y_from_index(i);
-			if (Y < y)
-			{
-				yB = Y;
-				yT = Y+grid_step_;
-				I = i-1;
-				break;
-			}
-		}
-		for (size_type j = 0; j < profiles_[k]->size2; ++j)
-		{
-			number_type X = x_from_index(j);
-			if (X > x)
-			{
-				xR = X;
-				xL = X-grid_step_;
-				J = j-1;
-				break;
-			}
-
-		}
-		e1 = gsl_matrix_get(profiles_[k], I+1, J);
-		e2 = gsl_matrix_get(profiles_[k], I+1, J+1);
-		e3 = gsl_matrix_get(profiles_[k], I, J+1);
-		e4 = gsl_matrix_get(profiles_[k], I, J);
-
-		// Step 2: Estimate energy density at (x,y)
-		// relative coordinates (t,u) with respect to the grid square
-		number_type t = (x-xL)/grid_step_;
-		number_type u = (y-yB)/grid_step_;
-
-		number_type energy = e1*(1.-t)*(1.-u)+e2*(t)*(1.-u)+e3*(t)*(u)+e4*(1.-t)*(u);
-
-		return energy;
+		return gsl_spline2d_eval(splines_[k], x, y, xacc_[k], yacc_[k]);
 	}
 
 
@@ -297,6 +346,8 @@ public:
 	}
 
 
+
+
 private:
 	// grid parameters
 	number_type grid_max_;
@@ -305,6 +356,14 @@ private:
 	// vector of energy density profiles
 	std::vector<gsl_matrix*> profiles_;
 
+	// interpolation objects
+	number_type* x_sites_;
+	number_type* y_sites_;
+	std::vector<number_type*> z_profiles_;
+	std::vector<const gsl_interp2d_type*> interpolators_;
+	std::vector<gsl_spline2d*> splines_;
+	std::vector<gsl_interp_accel*> xacc_;
+	std::vector<gsl_interp_accel*> yacc_;
 
 
 };
