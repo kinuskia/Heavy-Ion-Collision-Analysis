@@ -8,7 +8,23 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_interp2d.h>
 #include <gsl/gsl_spline2d.h>
+#include <gsl/gsl_integration.h>
 #include <algorithm>
+
+
+// Functions to transform polar coordinates to cartesian coordinates
+template<typename number_type>
+number_type to_x(number_type r, number_type phi)
+{
+	return r*cos(phi);
+}
+
+template<typename number_type>
+number_type to_y(number_type r, number_type phi)
+{
+	return r*sin(phi);
+}
+
 
 template <class REAL>
 class Collision
@@ -207,94 +223,19 @@ public:
 		return grid_max_-grid_step_/2 - grid_step_*i;
 	}
 
-	// Functions to transform polar coordinates to cartesian coordinates
-	number_type to_x(number_type r, number_type phi) const
-	{
-		return r*cos(phi);
-	}
-	number_type to_y(number_type r, number_type phi) const
-	{
-		return r*sin(phi);
-	}
 
-	// methods to integrate over phi (trapezoid rule) the profil k
-	number_type integ_phi(size_type k, number_type r, number_type phi_lower, number_type phi_upper)
-	{
-		size_type N = grid_size_;
-		number_type h = (phi_upper - phi_lower)/N;
-		number_type integral = interpolate(k, to_x(r, phi_lower), to_y(r, phi_lower));
-		integral += interpolate(k, to_x(r, phi_upper), to_y(r, phi_upper));
-		integral *= 0.5;
-		for (size_type l = 1; l < N; ++l)
-		{
-			number_type phi = phi_lower + h*l;
-			integral += interpolate(k, to_x(r, phi), to_y(r, phi));
-		}
-		integral *= h;
+	// integrate over phi at fixed r with gsl integration routine
+	// (only declaration, it is defined outside this class, see below)
+	number_type integ_phi(size_type k, number_type r, number_type phi_lower, number_type phi_upper);
+	
 
-		return integral;
 
-	}
-
-	// // interpolate energy density profil i at position (x,y)
-	// // now: bilinear interpolation
-	// number_type interpolate(size_type k, number_type x, number_type y) const
-	// {
-	// 	// Step 1: Find the grid square of (x,y), meaning the four tabulated
-	// 	// points that surround (x,y): (I,J) -> (I+1, J+1)
-	// 	// Let us enumerate the four points counter-clockwise from the lower left
-	// 	number_type e1;
-	// 	number_type e2;
-	// 	number_type e3;
-	// 	number_type e4;
-	// 	number_type xL;
-	// 	number_type xR;
-	// 	number_type yT;
-	// 	number_type yB;
-	// 	size_type I;
-	// 	size_type J;
-	// 	for (size_type i = 0; i < profiles_[k]->size1; ++i)
-	// 	{
-	// 		number_type Y = y_from_index(i);
-	// 		if (Y < y)
-	// 		{
-	// 			yB = Y;
-	// 			yT = Y+grid_step_;
-	// 			I = i-1;
-	// 			break;
-	// 		}
-	// 	}
-	// 	for (size_type j = 0; j < profiles_[k]->size2; ++j)
-	// 	{
-	// 		number_type X = x_from_index(j);
-	// 		if (X > x)
-	// 		{
-	// 			xR = X;
-	// 			xL = X-grid_step_;
-	// 			J = j-1;
-	// 			break;
-	// 		}
-
-	// 	}
-	// 	e1 = gsl_matrix_get(profiles_[k], I+1, J);
-	// 	e2 = gsl_matrix_get(profiles_[k], I+1, J+1);
-	// 	e3 = gsl_matrix_get(profiles_[k], I, J+1);
-	// 	e4 = gsl_matrix_get(profiles_[k], I, J);
-
-	// 	// Step 2: Estimate energy density at (x,y)
-	// 	// relative coordinates (t,u) with respect to the grid square
-	// 	number_type t = (x-xL)/grid_step_;
-	// 	number_type u = (y-yB)/grid_step_;
-
-	// 	number_type energy = e1*(1.-t)*(1.-u)+e2*(t)*(1.-u)+e3*(t)*(u)+e4*(1.-t)*(u);
-
-	// 	return energy;
-	// }
-
+	// interpolation of profil k
 	number_type interpolate(size_type k, number_type x, number_type y) const
 	{
 		return gsl_spline2d_eval(splines_[k], x, y, xacc_[k], yacc_[k]);
 	}
+
 
 
 	// average over azimuthal angle save to data storage
@@ -367,5 +308,46 @@ private:
 
 
 };
+
+// struct to feed profile index and radius to phi integration function
+template<typename size_type, typename number_type>
+struct interpolate_at_r_params
+{
+	size_type profile_index;
+	number_type radius;
+	Collision<number_type>* pt_Collision;
+};
+
+// gsl function to call to integrate over the energy density with respect to phi at fixed R
+double interpolate_at_r_wrapper(double phi, void* params)
+{
+	interpolate_at_r_params<std::size_t, double>* params_ = (interpolate_at_r_params<std::size_t, double>*) params;
+	std::size_t k = params_->profile_index;
+	double r = params_->radius;
+	double x = to_x(r, phi);
+	double y = to_y(r, phi);
+	return params_->pt_Collision->interpolate(k, x, y);
+}
+
+
+// integrate over phi at fixed r with gsl integration routine
+// Collision method, defined after (!) interpolate_at_r_params struct
+template<class number_type>
+number_type Collision<number_type>::integ_phi(std::size_t k, number_type r, number_type phi_lower, number_type phi_upper)
+{
+	typedef std::size_t size_type;
+	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
+	number_type integral;
+	number_type error;
+	interpolate_at_r_params<size_type, number_type> params = {k, r, this};
+
+	gsl_function F;
+	F.function = &interpolate_at_r_wrapper;
+	F.params = &params;
+	gsl_integration_qags(&F, phi_lower, phi_upper, 1e-5, 1e-5, 1000, w, &integral, &error);
+	//std::cout << " Radius: " << r << " Index: " << k <<  " Integral: " << integral << " Error abs: " << error << " Error rel: " << error/integral << "\n"; 
+	gsl_integration_workspace_free(w);
+	return integral;
+	}
 
 #endif
