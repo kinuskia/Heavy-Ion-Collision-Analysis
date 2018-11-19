@@ -9,6 +9,7 @@
 #include <gsl/gsl_interp2d.h>
 #include <gsl/gsl_spline2d.h>
 #include <gsl/gsl_integration.h>
+#include <gsl/gsl_fft_real.h>
 #include <algorithm>
 
 
@@ -38,6 +39,7 @@ public:
 	, grid_step_(grid_step)
 	, grid_size_(size_type(2.*grid_max/grid_step))
 	, profiles_(0)
+	, m_profiles_(0)
 	, z_profiles_(0)
 	, interpolators_(0)
 	, splines_(0)
@@ -269,7 +271,66 @@ public:
 
 			gsl_vector_free(e_ensemble);
 		}
+	}
 
+	void FourierBesselDecompose(std::string filename, size_type mMax, size_type lMax)
+	{
+		// // Fourier decomposition
+		// 
+		const size_type N_m = 256;
+		const size_type N_r = 100;
+		decompose_azimuthal(N_m, N_r);
+		for (size_type i = 0; i < 10; ++i)
+		{
+			for (size_type j = 0; j < 5; ++j)
+			{
+				std::cout << gsl_matrix_get(m_profiles_[0], i, j) << " ";
+			}
+			std::cout << "\n";
+		}
+
+
+		// // Bessel decomposition
+	}
+
+	/* Do a FFT decomposition of energy density profiles with respect to phi
+	   yielding profiles of the form
+	   E(m, r)
+	*/
+	void decompose_azimuthal(size_type N_m, size_type N_r)
+	{
+		number_type R = grid_max_-1;
+		for (size_type k = 0; k < profiles_.size(); ++k) // loop over profiles
+		{
+			// Set up matrix where (m, r)-profile will be saved
+			gsl_matrix* profile = gsl_matrix_alloc(N_m, N_r);
+
+			for (size_type i = 0; i < N_r; ++i) // loop over radii
+			{
+				number_type radius = R * i / N_r;
+				number_type* e_m_r;
+				e_m_r = new number_type[N_m];
+				// fill e_m_r with Energy(phi, r) values
+				for (size_type j = 0; j < N_m; ++j)
+				{
+					number_type phi = 2.*3.1415926 * j / N_m;
+					e_m_r[j] = interpolate(k, to_x(radius, phi), to_y(radius, phi));
+				}
+				// FFT it
+				gsl_fft_real_radix2_transform(e_m_r, 1, N_m);
+
+				// save result in matrix
+				for (size_type j = 0; j < N_m; ++j)
+				{
+					gsl_matrix_set(profile, j, i, e_m_r[j]/N_m);
+				}
+			}
+
+			// save computed profile internally
+			m_profiles_.push_back(profile);
+
+			//gsl_matrix_free(profile);
+		}
 	}
 
 	// print data matrix k
@@ -296,6 +357,9 @@ private:
 	size_type grid_size_;
 	// vector of energy density profiles
 	std::vector<gsl_matrix*> profiles_;
+
+	// vector of Fourier-decomposed (m, r)-profiles
+	std::vector<gsl_matrix*> m_profiles_;
 
 	// interpolation objects
 	number_type* x_sites_;
