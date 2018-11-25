@@ -9,6 +9,7 @@
 #include "to_size_t.hpp"
 #include "last_character.hpp"
 #include "to_file.hpp"
+#include <gsl/gsl_spline.h>
 
 
 #include <sstream>

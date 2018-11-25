@@ -15,5 +15,5 @@ do
 	
 	# Do radial analysis on Trento files with name Trento+impact_parameter+.dat, 
 	# each folder having 1000 files
-	./Fourier_Bessel_decomposition Trento/PbPb .dat $b 10000
+	./Fourier_Bessel_decomposition Trento/PbPb .dat $b 1000
 done

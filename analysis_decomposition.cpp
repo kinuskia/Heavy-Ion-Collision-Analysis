@@ -28,8 +28,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	PbPb.centralize(); // shift data so that barycentre at origin
 
 	// set interpolation method: gsl_interp2d_bicubic or gsl_interp2d_bilinear
-	const gsl_interp2d_type* interpolation_method = gsl_interp2d_bicubic;
-	PbPb.initialize_interpolation(interpolation_method); // initialize objects needed for interpolation
+	const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
+	PbPb.initialize_xy_interpolation(xy_interpolation_method); // initialize objects needed for interpolation
 
 
 	/*
@@ -42,7 +42,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	outfile += ".txt";
 	size_type mMax = 10;
 	size_type lMax = 10;
-	PbPb.FourierBesselDecompose(outfile, mMax, lMax);
+	const gsl_interp_type* r_interpolation_method = gsl_interp_cspline;
+	PbPb.FourierBesselDecompose(outfile, mMax, lMax, r_interpolation_method);
 
 	// // compute phi-averaged energy density profile and save to text file
 	// gsl_vector* radii = gsl_vector_alloc(500); // compute energy density for 500 radii between 0 and grid_max-1fm

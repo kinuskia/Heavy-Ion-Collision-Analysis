@@ -13,6 +13,7 @@
 #include <algorithm>
 #include "to_file.hpp"
 #include "statistics.hpp"
+#include <gsl/gsl_spline.h>
 
 
 // Functions to transform polar coordinates to cartesian coordinates
@@ -46,15 +47,23 @@ public:
 	, interpolators_(0)
 	, splines_(0)
 	, xacc_(0)
-	, yacc_(0) 
+	, yacc_(0)
+	, r_interpolators_(0)
+	, r_splines_(0)
+	, racc_(0) 
+	, Nm_(256)
+	, Nr_(size_type(grid_max/grid_step))
 	{
 		// initialize grid sites
 		x_sites_ = new number_type[grid_size_];
 		y_sites_ = new number_type[grid_size_];
+		r_sites_ = new number_type[Nr_];
+		R_ = grid_max_ - grid_step_;
 		for (size_type i = 0; i < grid_size_; ++i)
 		{
 			x_sites_[i] = x_from_index(i);
 			y_sites_[i] = -y_from_index(i);
+			r_sites_[i] = R_ * i / Nr_;
 		}
 	}
 
@@ -118,8 +127,8 @@ public:
 	}
 
 
-			// initialize interpolation
-	void initialize_interpolation(const gsl_interp2d_type* interp_method)
+	// initialize xy-interpolation
+	void initialize_xy_interpolation(const gsl_interp2d_type* interp_method)
 	{
 		for (size_type k = 0; k < profiles_.size(); ++k)
 		{
@@ -143,6 +152,46 @@ public:
 			}
 			gsl_spline2d_init(splines_[k], x_sites_, y_sites_, z_profiles_[k], grid_size_, grid_size_);
 		}
+
+	}
+
+	// initialize r-interpolation
+	/*
+		The interpolation objects of the m'th mode of the k'th profile ist saved at the index:
+		index = k*Nm_ + m
+		-> conversion:
+		k = index/Nm_
+		m = index%Nm_
+	*/
+	void initialize_r_interpolation(const gsl_interp_type* interp_method)
+	{
+		size_type N = profiles_.size();
+		for (size_type k = 0; k < N; ++k)
+		{
+			for (size_type m = 0; m < Nm_; ++m)
+			{
+				size_type index = k * Nm_ + m; // last index value: (N-1)*Nm_ + Nm_-1 = N*Nm_-1
+				const gsl_interp_type* interpolator = interp_method;
+				r_interpolators_.push_back(interpolator);
+				gsl_spline* spline = gsl_spline_alloc(r_interpolators_[index], Nr_);
+				r_splines_.push_back(spline);
+				gsl_interp_accel* racc = gsl_interp_accel_alloc();
+				racc_.push_back(racc);
+
+				// set interpolation values
+				number_type* e_sites;
+				e_sites = new number_type[Nr_];
+				for (size_type i = 0; i < Nr_; ++i)
+				{
+					e_sites[i] = gsl_matrix_get(m_profiles_[k], m, i);
+				} 
+
+
+				// initialize spline object
+				gsl_spline_init(r_splines_[index], r_sites_, e_sites, Nr_);
+			}
+		}
+
 	}
 
 	// normalize matrix data (integral = 1)
@@ -235,9 +284,16 @@ public:
 
 
 	// interpolation of profil k
-	number_type interpolate(size_type k, number_type x, number_type y) const
+	number_type interpolate(size_type k, number_type x, number_type y) 
 	{
 		return gsl_spline2d_eval(splines_[k], x, y, xacc_[k], yacc_[k]);
+	}
+
+	// r-interpolation of m-th Fourier mode of profile k
+	number_type interpolate_fourier(size_type k, size_type m, number_type r)
+	{
+		size_type index = k * Nm_ + m;
+		return gsl_spline_eval(r_splines_[index], r, racc_[index]);
 	}
 
 
@@ -248,10 +304,9 @@ public:
 		size_type N = radii->size;
 
 		// For each profile compute e_average as function of r
-		number_type R = grid_max_-1;
 		for (size_type l = 0; l < N; ++l) // loop over radii
 		{
-			number_type r = number_type(l)/N*R;
+			number_type r = number_type(l)/N*R_;
 			gsl_vector* e_ensemble = gsl_vector_alloc(profiles_.size());
 			for (size_type k = 0; k < profiles_.size(); ++k) // loop over profiles
 			{
@@ -275,20 +330,20 @@ public:
 		}
 	}
 
-	void FourierBesselDecompose(std::string filename, size_type mMax, size_type lMax)
+	void FourierBesselDecompose(std::string filename, size_type mMax, size_type lMax, const gsl_interp_type* interpolation_method)
 	{
 		// // Fourier decomposition
 		// 
-		const size_type N_m = 256;
-		const size_type N_r = 100;
-		decompose_azimuthal(N_m, N_r);
+
+		decompose_azimuthal();
+		initialize_r_interpolation(interpolation_method);
 
 		// print energy-r curves for some numbers m
 		for (size_type m = 0; m < 4; ++m)
 		{
-			gsl_vector* radii = gsl_vector_alloc(N_r);
-			gsl_vector* e_mean = gsl_vector_alloc(N_r);
-			gsl_vector* e_err = gsl_vector_alloc(N_r);
+			gsl_vector* radii = gsl_vector_alloc(Nr_);
+			gsl_vector* e_mean = gsl_vector_alloc(Nr_);
+			gsl_vector* e_err = gsl_vector_alloc(Nr_);
 
 			average_fourier(m, radii, e_mean, e_err);
 
@@ -304,6 +359,8 @@ public:
 
 		}
 
+	
+
 		// // Bessel decomposition
 	}
 
@@ -311,32 +368,31 @@ public:
 	   yielding profiles of the form
 	   E(m, r)
 	*/
-	void decompose_azimuthal(size_type N_m, size_type N_r)
+	void decompose_azimuthal()
 	{
-		number_type R = grid_max_-1;
 		for (size_type k = 0; k < profiles_.size(); ++k) // loop over profiles
 		{
 			// Set up matrix where (m, r)-profile will be saved
-			gsl_matrix* profile = gsl_matrix_alloc(N_m, N_r);
+			gsl_matrix* profile = gsl_matrix_alloc(Nm_, Nr_);
 
-			for (size_type i = 0; i < N_r; ++i) // loop over radii
+			for (size_type i = 0; i < Nr_; ++i) // loop over radii
 			{
-				number_type radius = R * i / N_r;
+				number_type radius = R_ * i / Nr_;
 				number_type* e_m_r;
-				e_m_r = new number_type[N_m];
+				e_m_r = new number_type[Nm_];
 				// fill e_m_r with Energy(phi, r) values
-				for (size_type j = 0; j < N_m; ++j)
+				for (size_type j = 0; j < Nm_; ++j)
 				{
-					number_type phi = 2.*3.1415926 * j / N_m;
+					number_type phi = 2.*3.1415926 * j / Nm_;
 					e_m_r[j] = interpolate(k, to_x(radius, phi), to_y(radius, phi));
 				}
 				// FFT it
-				gsl_fft_real_radix2_transform(e_m_r, 1, N_m);
+				gsl_fft_real_radix2_transform(e_m_r, 1, Nm_);
 
 				// save result in matrix
-				for (size_type j = 0; j < N_m; ++j)
+				for (size_type j = 0; j < Nm_; ++j)
 				{
-					gsl_matrix_set(profile, j, i, e_m_r[j]/N_m);
+					gsl_matrix_set(profile, j, i, e_m_r[j]/Nm_);
 				}
 			}
 
@@ -350,17 +406,15 @@ public:
 	// print average of Fourier decomposed data
 	void average_fourier(size_type m, gsl_vector* radii, gsl_vector* e_mean, gsl_vector* e_err)
 	{
-		size_type N_r = e_mean->size;
-		size_type N_m = m_profiles_[0]->size1;
-		number_type R = grid_max_-1;
-		for (size_type i = 0; i < N_r; ++i) // loop over radii
+		assert(e_mean->size == Nr_);
+		for (size_type i = 0; i < Nr_; ++i) // loop over radii
 		{
-			number_type r = R * i / N_r; // current radius
+			number_type r = R_ * i / Nr_; // current radius
 			gsl_vector_set(radii, i, r);
-			gsl_vector* e_ensemble = gsl_vector_alloc(m_profiles_.size());
+			gsl_vector* e_ensemble = gsl_vector_alloc(profiles_.size());
 			number_type mean_val;
 			number_type mean_err;
-			for (size_type k = 0; k < m_profiles_.size(); ++k) // loop over profiles
+			for (size_type k = 0; k < profiles_.size(); ++k) // loop over profiles
 			{
 				number_type real_part = gsl_matrix_get(m_profiles_[k], m, i);
 				number_type imag_part;
@@ -370,7 +424,7 @@ public:
 				}
 				else
 				{
-					imag_part = gsl_matrix_get(m_profiles_[k], N_m - m, i);
+					imag_part = gsl_matrix_get(m_profiles_[k], Nm_ - m, i);
 				}
 
 				number_type module = sqrt(real_part*real_part+imag_part*imag_part);
@@ -413,7 +467,7 @@ private:
 	// vector of Fourier-decomposed (m, r)-profiles
 	std::vector<gsl_matrix*> m_profiles_;
 
-	// interpolation objects
+	// x-y-interpolation objects
 	number_type* x_sites_;
 	number_type* y_sites_;
 	std::vector<number_type*> z_profiles_;
@@ -421,6 +475,16 @@ private:
 	std::vector<gsl_spline2d*> splines_;
 	std::vector<gsl_interp_accel*> xacc_;
 	std::vector<gsl_interp_accel*> yacc_;
+
+	// r-interpolation objects
+	number_type* r_sites_;
+	number_type R_;
+	const size_type Nr_; // number of lattice sites in r direction
+	const size_type Nm_; // number of m-modes for Fourier decomposition
+	std::vector<const gsl_interp_type*> r_interpolators_;
+	std::vector<gsl_spline*> r_splines_;
+	std::vector<gsl_interp_accel*> racc_;
+
 
 
 };
