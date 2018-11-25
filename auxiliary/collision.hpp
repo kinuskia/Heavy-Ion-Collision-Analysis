@@ -58,6 +58,7 @@ public:
 		x_sites_ = new number_type[grid_size_];
 		y_sites_ = new number_type[grid_size_];
 		r_sites_ = new number_type[Nr_];
+		W_sites_ = new number_type[Nr_];
 		R_ = grid_max_ - grid_step_;
 		for (size_type i = 0; i < grid_size_; ++i)
 		{
@@ -280,6 +281,10 @@ public:
 	// integrate over phi at fixed r with gsl integration routine
 	// (only declaration, it is defined outside this class, see below)
 	number_type integ_phi(size_type k, number_type r, number_type phi_lower, number_type phi_upper);
+
+	// integrate over r at fixed Fourier mode m with gsl integration routine
+	// (only declaration, it is defined outside this class, see below)
+	number_type integ_fourier_r(size_type k, size_type m, number_type r_lower, number_type r_upper);
 	
 
 
@@ -296,6 +301,16 @@ public:
 		return gsl_spline_eval(r_splines_[index], r, racc_[index]);
 	}
 
+	// interpolate weight function
+	number_type W(number_type r)
+	{
+		return gsl_spline_eval(W_spline_, r, W_acc_);
+	}
+
+
+	// map r to normalized variable rho \in (0, 1) using W(r)
+	// only declared, definition outside class
+	number_type rho(number_type r);
 
 
 	// average over azimuthal angle save to data storage
@@ -358,6 +373,16 @@ public:
 			gsl_vector_free(e_err);
 
 		}
+		size_type N = 300;
+		std::vector<number_type> radii(N);
+		std::vector<number_type> weight(N);
+		std::vector<number_type> rhoes(N);
+		for (size_type i = 0; i < N; ++i)
+		{
+			radii[i] = (R_-grid_step_)*i/N;
+			rhoes[i] = rho(radii[i]);
+			std::cout << radii[i] << " " << rhoes[i] << "\n";
+		}
 
 	
 
@@ -401,6 +426,35 @@ public:
 
 			//gsl_matrix_free(profile);
 		}
+
+		/* 
+		Compute ensemble average of zero-th mode with yields the W(r) weight function needed for the
+		Bessel decomposition
+		*/
+
+		gsl_vector* radii = gsl_vector_alloc(Nr_);
+		gsl_vector* e_mean = gsl_vector_alloc(Nr_);
+		gsl_vector* e_err = gsl_vector_alloc(Nr_);
+
+		average_fourier(0, radii, e_mean, e_err);
+		for (size_type i = 0; i < Nr_; ++i)
+		{
+			W_sites_[i] = gsl_vector_get(e_mean, i)*3.1415926;
+		}
+
+		gsl_vector_free(radii);
+		gsl_vector_free(e_mean);
+		gsl_vector_free(e_err);
+
+		// Initialize interpolation objects for W(r) interpolation
+		const gsl_interp_type* interpolator = gsl_interp_cspline;
+		W_interpolator_ = interpolator;
+		gsl_spline* spline = gsl_spline_alloc(W_interpolator_, Nr_);
+		W_spline_ = spline;
+		gsl_interp_accel* acc = gsl_interp_accel_alloc();
+		W_acc_ = acc;
+		gsl_spline_init(W_spline_, r_sites_, W_sites_, Nr_);
+
 	}
 
 	// print average of Fourier decomposed data
@@ -485,6 +539,12 @@ private:
 	std::vector<gsl_spline*> r_splines_;
 	std::vector<gsl_interp_accel*> racc_;
 
+	// W(r) interpolation
+	number_type* W_sites_;
+	const gsl_interp_type* W_interpolator_;
+	gsl_spline* W_spline_;
+	gsl_interp_accel* W_acc_;
+
 
 
 };
@@ -528,6 +588,77 @@ number_type Collision<number_type>::integ_phi(std::size_t k, number_type r, numb
 	//std::cout << " Radius: " << r << " Index: " << k <<  " Integral: " << integral << " Error abs: " << error << " Error rel: " << error/integral << "\n"; 
 	gsl_integration_workspace_free(w);
 	return integral;
-	}
+}
+
+// struct to feed profile index and mode number m to r integration function
+template<typename size_type, typename number_type>
+struct interpolate_at_m_params
+{
+	size_type profile_index;
+	size_type mode;
+	Collision<number_type>* pt_Collision;
+};
+
+// gsl function to call to integrate over the mth Fourier mode of the energy density with respect to r at fixed m
+double interpolate_at_m_wrapper(double r, void* params)
+{
+	interpolate_at_m_params<std::size_t, double>* params_ = (interpolate_at_m_params<std::size_t, double>*) params;
+	std::size_t k = params_->profile_index;
+	std::size_t m = params_->mode;
+	return (params_->pt_Collision->interpolate_fourier(k, m, r))*r; // times r because of dr measure
+}
+
+// integrate over r at fixed Fourier-mode m with gsl integration routine
+// Collision method, defined after (!) interpolate_at_m_params struct
+template<class number_type>
+number_type Collision<number_type>::integ_fourier_r(size_type k, size_type m, number_type r_lower, number_type r_upper)
+{
+	typedef std::size_t size_type;
+	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
+	number_type integral;
+	number_type error;
+	interpolate_at_m_params<size_type, number_type> params = {k, m, this};
+
+	gsl_function F;
+	F.function = &interpolate_at_m_wrapper;
+	F.params = &params;
+	gsl_integration_qags(&F, r_lower, r_upper, 1e-5, 1e-5, 1000, w, &integral, &error);
+	//std::cout << " Radius: " << r << " Index: " << k <<  " Integral: " << integral << " Error abs: " << error << " Error rel: " << error/integral << "\n"; 
+	gsl_integration_workspace_free(w);
+	return integral;
+}
+
+// struct to feed Collision object to rho(r) function
+template<typename number_type>
+struct interpolate_W_params
+{
+	Collision<number_type>* pt_Collision;
+};
+
+// gsl function to call for rho(r) function
+double interpolate_W_wrapper(double r, void* params)
+{
+	interpolate_W_params<double>* params_ = (interpolate_W_params<double>*) params;
+	return (params_->pt_Collision->W(r))*r*2; // times r because of dr measure
+}
+
+// rho(r) function, see description above declaration in class
+// Collision method, defined after (!) interpolate_W_params struct
+template<class number_type>
+number_type Collision<number_type>::rho(number_type r)
+{
+	typedef std::size_t size_type;
+	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
+	number_type integral;
+	number_type error;
+	interpolate_W_params<number_type> params = {this};
+
+	gsl_function F;
+	F.function = &interpolate_W_wrapper;
+	F.params = &params;
+	gsl_integration_qags(&F, 0, r, 1e-5, 1e-5, 1000, w, &integral, &error);
+	gsl_integration_workspace_free(w);
+	return integral;
+}
 
 #endif
