@@ -11,6 +11,8 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_fft_real.h>
 #include <algorithm>
+#include "to_file.hpp"
+#include "statistics.hpp"
 
 
 // Functions to transform polar coordinates to cartesian coordinates
@@ -280,15 +282,27 @@ public:
 		const size_type N_m = 256;
 		const size_type N_r = 100;
 		decompose_azimuthal(N_m, N_r);
-		for (size_type i = 0; i < 10; ++i)
-		{
-			for (size_type j = 0; j < 5; ++j)
-			{
-				std::cout << gsl_matrix_get(m_profiles_[0], i, j) << " ";
-			}
-			std::cout << "\n";
-		}
 
+		// print energy-r curves for some numbers m
+		for (size_type m = 0; m < 4; ++m)
+		{
+			gsl_vector* radii = gsl_vector_alloc(N_r);
+			gsl_vector* e_mean = gsl_vector_alloc(N_r);
+			gsl_vector* e_err = gsl_vector_alloc(N_r);
+
+			average_fourier(m, radii, e_mean, e_err);
+
+			std::string filename = "output/e_ave_fourier";
+			filename += std::to_string(m);
+			filename += ".txt";
+
+			to_file(filename, radii, e_mean, e_err);
+
+			gsl_vector_free(radii);
+			gsl_vector_free(e_mean);
+			gsl_vector_free(e_err);
+
+		}
 
 		// // Bessel decomposition
 	}
@@ -331,6 +345,44 @@ public:
 
 			//gsl_matrix_free(profile);
 		}
+	}
+
+	// print average of Fourier decomposed data
+	void average_fourier(size_type m, gsl_vector* radii, gsl_vector* e_mean, gsl_vector* e_err)
+	{
+		size_type N_r = e_mean->size;
+		size_type N_m = m_profiles_[0]->size1;
+		number_type R = grid_max_-1;
+		for (size_type i = 0; i < N_r; ++i) // loop over radii
+		{
+			number_type r = R * i / N_r; // current radius
+			gsl_vector_set(radii, i, r);
+			gsl_vector* e_ensemble = gsl_vector_alloc(m_profiles_.size());
+			number_type mean_val;
+			number_type mean_err;
+			for (size_type k = 0; k < m_profiles_.size(); ++k) // loop over profiles
+			{
+				number_type real_part = gsl_matrix_get(m_profiles_[k], m, i);
+				number_type imag_part;
+				if (m == 0)
+				{
+					imag_part = 0;
+				}
+				else
+				{
+					imag_part = gsl_matrix_get(m_profiles_[k], N_m - m, i);
+				}
+
+				number_type module = sqrt(real_part*real_part+imag_part*imag_part);
+
+				gsl_vector_set(e_ensemble, k, module);
+			}
+			mean(e_ensemble, mean_val, mean_err);
+			gsl_vector_set(e_mean, i, mean_val);
+			gsl_vector_set(e_err, i, mean_err);
+
+			gsl_vector_free(e_ensemble);
+		}	
 	}
 
 	// print data matrix k
