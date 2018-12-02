@@ -10,6 +10,7 @@
 #include "last_character.hpp"
 #include "to_file.hpp"
 #include <gsl/gsl_spline.h>
+#include "complex_matrix.hpp"
 
 
 #include <sstream>

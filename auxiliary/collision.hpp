@@ -14,6 +14,8 @@
 #include "to_file.hpp"
 #include "statistics.hpp"
 #include <gsl/gsl_spline.h>
+#include <gsl/gsl_sf_bessel.h>
+#include "complex_matrix.hpp"
 
 
 // Functions to transform polar coordinates to cartesian coordinates
@@ -66,6 +68,12 @@ public:
 			y_sites_[i] = -y_from_index(i);
 			r_sites_[i] = R_ * i / Nr_;
 		}
+	}
+
+	// getter functions
+	size_type Nm() const
+	{
+		return Nm_;
 	}
 
 	// function to generate the filename of data file k
@@ -125,6 +133,19 @@ public:
 			read_data(filename, data, 8);
 			profiles_.push_back(data);
 		}
+	}
+
+	// Read in zeros of first derivative of the Bessel function J from text file (l'th zero crossing of J'_m)
+	void get_Bessel_deriv_zeros(std::string source, size_type m, size_type l)
+	{
+		bessel_deriv_zeros_ = gsl_matrix_alloc(m, l);
+		read_data(source, bessel_deriv_zeros_, 1);
+	}
+
+	number_type Bessel_zero(size_type m, size_type l)
+	{
+		//return gsl_matrix_get(bessel_deriv_zeros_, m, l-1);
+		return gsl_sf_bessel_zero_Jnu(m, l);
 	}
 
 
@@ -282,9 +303,9 @@ public:
 	// (only declaration, it is defined outside this class, see below)
 	number_type integ_phi(size_type k, number_type r, number_type phi_lower, number_type phi_upper);
 
-	// integrate over r at fixed Fourier mode m with gsl integration routine
+	// integrate over r at fixed Fourier mode m and Bessel(m,l) as weight function with gsl integration routine
 	// (only declaration, it is defined outside this class, see below)
-	number_type integ_fourier_r(size_type k, size_type m, number_type r_lower, number_type r_upper);
+	number_type integ_fourier_r(size_type k, size_type m, size_type l, number_type r_lower, number_type r_upper);
 	
 
 
@@ -305,6 +326,34 @@ public:
 	number_type W(number_type r)
 	{
 		return gsl_spline_eval(W_spline_, r, W_acc_);
+	}
+
+	// Evaluate appropriate Bessel function
+	number_type Bessel(size_type m, size_type l, number_type r)
+	{
+		// // Verify the zero crossing needed is available
+		// assert(l>0);
+		// assert(l <= bessel_deriv_zeros_->size2);
+		// assert(m < bessel_deriv_zeros_->size1);
+
+		return gsl_sf_bessel_Jn(m, Bessel_zero(m, l)*rho(r));
+	}
+
+	// // evaluate Bessel coefficient c_ml (if one uses J' zeros)
+	// number_type c (size_type m, size_type l)
+	// {
+	// 	number_type zero = Bessel_zero(m, l) ; 
+	// 	return gsl_sf_bessel_Jn(m, zero)*gsl_sf_bessel_Jn(m, zero)*(zero*zero - m*m)/2./zero/zero;
+	// }
+
+	// evaluate Bessel coefficient c_ml (if one uses J zeros)
+	number_type c (size_type m, size_type l)
+	{
+		number_type zero = Bessel_zero(m, l); 
+		// value of J' at zero
+		number_type h = 0.001;
+		number_type deriv = (gsl_sf_bessel_Jn(m, zero+h)-gsl_sf_bessel_Jn(m, zero-h))/2./h;
+		return (deriv*deriv)/2.;
 	}
 
 
@@ -345,7 +394,7 @@ public:
 		}
 	}
 
-	void FourierBesselDecompose(std::string filename, size_type mMax, size_type lMax, const gsl_interp_type* interpolation_method)
+	void FourierBesselDecompose(complex_matrix<number_type> & coeffs_mean, complex_matrix<number_type> & coeffs_err, const gsl_interp_type* interpolation_method)
 	{
 		// // Fourier decomposition
 		// 
@@ -373,20 +422,61 @@ public:
 			gsl_vector_free(e_err);
 
 		}
-		size_type N = 300;
-		std::vector<number_type> radii(N);
-		std::vector<number_type> weight(N);
-		std::vector<number_type> rhoes(N);
-		for (size_type i = 0; i < N; ++i)
-		{
-			radii[i] = (R_-grid_step_)*i/N;
-			rhoes[i] = rho(radii[i]);
-			std::cout << radii[i] << " " << rhoes[i] << "\n";
-		}
+		// size_type N = 100;
+		// std::vector<number_type> radii(N);
+		// std::vector<number_type> bessels01(N);
+		// std::vector<number_type> bessels02(N);
+		// std::vector<number_type> bessels03(N);
+		// for (size_type i = 0; i < N; ++i)
+		// {
+		// 	radii[i] = (R_-grid_step_)*i/N;
+		// 	bessels01[i] = Bessel(0, 1, radii[i])*W(radii[i])*R_*R_;
+		// 	bessels02[i] = Bessel(0, 2, radii[i])*W(radii[i])*R_*R_;
+		// 	bessels03[i] = Bessel(0, 3, radii[i])*W(radii[i])*R_*R_;
+			
+		// }
+		// std::vector<std::vector<number_type>> data(4);
+		// data[0] = radii;
+		// data[1] = bessels01;
+		// data[2] = bessels02;
+		// data[3] = bessels03;
+		// to_file("output/bessel.txt", data);
 
-	
 
 		// // Bessel decomposition
+
+		size_type mMax = coeffs_mean.rowsize()-1;
+		size_type lMax = coeffs_mean.colsize();
+
+		std::vector<complex_matrix<number_type>> Fourier_Bessel_coeffs(0);
+
+		for (size_type k = 0; k < profiles_.size(); ++k)
+		{
+			complex_matrix<number_type> current_coeff(mMax+1, lMax);
+			for (size_type m = 0; m <= mMax; ++m)
+			{
+				for (size_type l = 1; l <= lMax; ++l)
+				{
+					number_type real = integ_fourier_r(k, m, l, 0, R_-grid_step_)/c(m, l);
+					number_type imag;
+					if (m == 0)
+					{
+						imag = 0;
+					}
+					else
+					{
+						imag = integ_fourier_r(k, Nm_-m, l, 0, R_-grid_step_)/c(m, l);
+					}
+					current_coeff.set_entry(m, l-1, real, imag);
+				}
+			}
+			Fourier_Bessel_coeffs.push_back(current_coeff);
+		}
+
+		// Compute ensemble mean of Fourier-Bessel coefficients
+		mean(Fourier_Bessel_coeffs, coeffs_mean, coeffs_err);
+
+
 	}
 
 	/* Do a FFT decomposition of energy density profiles with respect to phi
@@ -545,6 +635,9 @@ private:
 	gsl_spline* W_spline_;
 	gsl_interp_accel* W_acc_;
 
+	// Miscellaneous
+	gsl_matrix* bessel_deriv_zeros_;
+
 
 
 };
@@ -595,7 +688,8 @@ template<typename size_type, typename number_type>
 struct interpolate_at_m_params
 {
 	size_type profile_index;
-	size_type mode;
+	size_type mode_m;
+	size_type mode_l;
 	Collision<number_type>* pt_Collision;
 };
 
@@ -604,20 +698,30 @@ double interpolate_at_m_wrapper(double r, void* params)
 {
 	interpolate_at_m_params<std::size_t, double>* params_ = (interpolate_at_m_params<std::size_t, double>*) params;
 	std::size_t k = params_->profile_index;
-	std::size_t m = params_->mode;
-	return (params_->pt_Collision->interpolate_fourier(k, m, r))*r; // times r because of dr measure
+	std::size_t m = params_->mode_m;
+	std::size_t l = params_->mode_l;
+	size_type Nm = params_->pt_Collision->Nm();
+	if (m < Nm/2)
+	{
+		return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l, r)); // times r because of dr measure
+	}
+	else // m> Nm/2 calls refer to the imaginary part of E_(Nm-m) (r)
+	{
+		return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(Nm-m, l, r)); // times r because of dr measure
+	}	
+	
 }
 
-// integrate over r at fixed Fourier-mode m with gsl integration routine
+// integrate over r at fixed Fourier-mode m and Bessel(m,l) as weight with gsl integration routine
 // Collision method, defined after (!) interpolate_at_m_params struct
 template<class number_type>
-number_type Collision<number_type>::integ_fourier_r(size_type k, size_type m, number_type r_lower, number_type r_upper)
+number_type Collision<number_type>::integ_fourier_r(size_type k, size_type m, size_type l, number_type r_lower, number_type r_upper)
 {
 	typedef std::size_t size_type;
 	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
 	number_type integral;
 	number_type error;
-	interpolate_at_m_params<size_type, number_type> params = {k, m, this};
+	interpolate_at_m_params<size_type, number_type> params = {k, m, l, this};
 
 	gsl_function F;
 	F.function = &interpolate_at_m_wrapper;
@@ -639,7 +743,7 @@ struct interpolate_W_params
 double interpolate_W_wrapper(double r, void* params)
 {
 	interpolate_W_params<double>* params_ = (interpolate_W_params<double>*) params;
-	return (params_->pt_Collision->W(r))*r*2; // times r because of dr measure
+	return (params_->pt_Collision->W(r))*r; // times r because of dr measure
 }
 
 // rho(r) function, see description above declaration in class
@@ -658,7 +762,7 @@ number_type Collision<number_type>::rho(number_type r)
 	F.params = &params;
 	gsl_integration_qags(&F, 0, r, 1e-5, 1e-5, 1000, w, &integral, &error);
 	gsl_integration_workspace_free(w);
-	return integral;
+	return sqrt(integral*2.0);
 }
 
 #endif

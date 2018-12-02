@@ -19,6 +19,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	// Read in and pre-process Trento data
 	Collision<number_type> PbPb(10, .2); // Create Collision object
+	PbPb.get_Bessel_deriv_zeros("auxiliary/bessel_zeros.txt", 11, 5);
 
 	PbPb.read_in(filename, fileformat, n_files); // read in Trento event files
 
@@ -40,24 +41,30 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	std::string outfile = "output/decomposition";
 	outfile += impact_parameter;
 	outfile += ".txt";
-	size_type mMax = 10;
-	size_type lMax = 10;
+	size_type mMax = 5;
+	size_type lMax = 20;
+	complex_matrix<number_type> Fourier_Bessel_coeffs_mean(mMax+1, lMax);
+	complex_matrix<number_type> Fourier_Bessel_coeffs_err(mMax+1, lMax);
 	const gsl_interp_type* r_interpolation_method = gsl_interp_cspline;
-	PbPb.FourierBesselDecompose(outfile, mMax, lMax, r_interpolation_method);
+	PbPb.FourierBesselDecompose(Fourier_Bessel_coeffs_mean, Fourier_Bessel_coeffs_err, r_interpolation_method);
 
-	// // compute phi-averaged energy density profile and save to text file
-	// gsl_vector* radii = gsl_vector_alloc(500); // compute energy density for 500 radii between 0 and grid_max-1fm
-	// gsl_vector* energy = gsl_vector_alloc(radii->size); // for each radius, the energy density and...
-	// gsl_vector* energy_err = gsl_vector_alloc(radii->size); /// ...its statistical uncertainty is saved
+	Fourier_Bessel_coeffs_mean.print();
 
-	// PbPb.average_azimuthal(radii, energy, energy_err);
-	
+	Fourier_Bessel_coeffs_err.print();
 
-
-	// // free allocated memory
-	// gsl_vector_free(radii);
-	// gsl_vector_free(energy);
-	// gsl_vector_free(energy_err);
+	// save moduli of coeffs in text file 
+	gsl_matrix* moduli = gsl_matrix_alloc(Fourier_Bessel_coeffs_mean.rowsize(), Fourier_Bessel_coeffs_mean.colsize());
+	for (size_type i = 0; i < moduli->size1; ++i)
+	{
+		for (size_type j = 0; j < moduli->size2; ++j)
+		{
+			number_type real = Fourier_Bessel_coeffs_mean.get_real(i, j);
+			number_type imag = Fourier_Bessel_coeffs_mean.get_imag(i, j);
+			gsl_matrix_set(moduli, i, j, sqrt(real*real+imag*imag));
+		}
+	} 
+	to_file(outfile, moduli);
+	gsl_matrix_free(moduli);
 
 	PbPb.free();
 

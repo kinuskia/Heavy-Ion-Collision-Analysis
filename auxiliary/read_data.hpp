@@ -13,7 +13,7 @@ void insert(number_type number, size_type counter, gsl_matrix* data)
 	size_type n_cols = data->size2;
 	size_type rownumber = counter/n_cols;
 	size_type colnumber = counter%n_cols;
-	assert(data->size1 == data->size2);
+	//assert(data->size1 == data->size2);
 	
 	gsl_matrix_set(data, rownumber, colnumber, number);
 }
@@ -46,9 +46,10 @@ void read_data(std::string filename, gsl_matrix* data, size_type skip_rows = 0)
 		bool last_char_is_number;
 		for (int i = 0; i < line.length(); ++i)
 		{
+	
 			// Detect beginning of a number
 			bool is_number = std::isalnum(line[i]) || (line[i] == '.') || (line[i] == '-');
-			bool is_seperator = (line[i] == ' ' && line[i] == '\t');
+			//bool is_seperator = (line[i] == ' ' && line[i] == '\t');
 			if (is_number) // Detect beginning of a number
 			{
 				end_of_number = false;
