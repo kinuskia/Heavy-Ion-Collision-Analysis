@@ -3,7 +3,7 @@
 
 
 
-int main (int argc, char* argv[]) // command-line input: filename_begin, fileformat, impact_parameter, # of files
+int main (int argc, char* argv[]) // command-line input: filename_begin, fileformat, impact_parameter, m, # of files
 {
 	typedef double number_type;
 	typedef std::size_t size_type;
@@ -17,7 +17,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	filename += impact_parameter;
 	filename += "/";
 	std::string fileformat = argv[2];
-	size_type n_files = to_size_t(argv[4]);
+	size_type m = to_size_t(argv[4]);
+	size_type n_files = to_size_t(argv[5]);
 
 
 	// Read in and pre-process Trento data
@@ -39,31 +40,33 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 
 	/*
-	compute expectation values <e_ml>
+	compute two point correlators with fixed m=m': <e_ml e_ml'>
 	*/
 	// Create outfile name
-	std::string outfile = "output/decomposition";
+	std::string outfile = "output/two_point_b";
 	outfile += impact_parameter;
+	outfile += "_m";
+	outfile += std::to_string(m);
 	outfile += ".txt";
-	size_type mMax = 10;
-	size_type lMax = 10;
-	complex_matrix<number_type> Fourier_Bessel_coeffs_mean(mMax+1, lMax);
-	complex_matrix<number_type> Fourier_Bessel_coeffs_err(mMax+1, lMax);
+	size_type lMax = 20;
+
+	complex_matrix<number_type> TwoPointFunction(lMax, lMax);
+	complex_matrix<number_type> TwoPointFunction_err(lMax, lMax);
 	const gsl_interp_type* r_interpolation_method = gsl_interp_cspline;
-	PbPb.FourierBesselDecompose(Fourier_Bessel_coeffs_mean, Fourier_Bessel_coeffs_err, r_interpolation_method, start);
+	PbPb.getTwoPointFunction(m, TwoPointFunction, TwoPointFunction_err, r_interpolation_method, start);
 
 	//Fourier_Bessel_coeffs_mean.print();
 
 	//Fourier_Bessel_coeffs_err.print();
 
 	// save moduli of coeffs in text file 
-	gsl_matrix* moduli = gsl_matrix_alloc(Fourier_Bessel_coeffs_mean.rowsize(), Fourier_Bessel_coeffs_mean.colsize());
+	gsl_matrix* moduli = gsl_matrix_alloc(TwoPointFunction.rowsize(), TwoPointFunction.colsize());
 	for (size_type i = 0; i < moduli->size1; ++i)
 	{
 		for (size_type j = 0; j < moduli->size2; ++j)
 		{
-			number_type real = Fourier_Bessel_coeffs_mean.get_real(i, j);
-			number_type imag = Fourier_Bessel_coeffs_mean.get_imag(i, j);
+			number_type real = TwoPointFunction.get_real(i, j);
+			number_type imag = TwoPointFunction.get_imag(i, j);
 			gsl_matrix_set(moduli, i, j, sqrt(real*real+imag*imag));
 		}
 	} 

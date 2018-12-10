@@ -54,7 +54,7 @@ public:
 	, r_interpolators_(0)
 	, r_splines_(0)
 	, racc_(0) 
-	, Nm_(256)
+	, Nm_(128)
 	, Nr_(size_type(grid_max/grid_step))
 	{
 		// initialize grid sites
@@ -416,13 +416,16 @@ public:
 		}
 	}
 
-	void FourierBesselDecompose(complex_matrix<number_type> & coeffs_mean, complex_matrix<number_type> & coeffs_err, const gsl_interp_type* interpolation_method)
+	void FourierBesselDecompose(complex_matrix<number_type> & coeffs_mean, complex_matrix<number_type> & coeffs_err, const gsl_interp_type* interpolation_method, std::time_t start)
 	{
 		// // Fourier decomposition
 		// 
 
 		decompose_azimuthal();
 		initialize_r_interpolation(interpolation_method);
+
+		std::time_t current_time = std::time(nullptr);
+		std::cout << current_time-start << "s: " << "Profiles have been Fourier-decomposed.\n"; 
 
 
 		// // Bessel decomposition
@@ -440,25 +443,13 @@ public:
 		for (size_type k = 0; k < profiles_.size(); ++k)
 		{
 			complex_matrix<number_type> current_coeff(mMax+1, lMax);
-			for (size_type m = 0; m <= mMax; ++m)
-			{
-				for (size_type l = 1; l <= lMax; ++l)
-				{
-					number_type real = integ_fourier_r(k, m, l, 0, R_-grid_step_)/c(m, l);
-					number_type imag;
-					if (m == 0)
-					{
-						imag = 0;
-					}
-					else
-					{
-						imag = integ_fourier_r(k, Nm_-m, l, 0, R_-grid_step_)/c(m, l);
-					}
-					current_coeff.set_entry(m, l-1, real, imag);
-				}
-			}
+			BesselDecomposeProfile(k, current_coeff);
+			
 			Fourier_Bessel_coeffs.push_back(current_coeff);
 		}
+
+		current_time = std::time(nullptr);
+		std::cout << current_time-start << "s: " << "Profiles have been Bessel-decomposed.\n"; 
 
 		// Compute ensemble mean of Fourier-Bessel coefficients
 		mean(Fourier_Bessel_coeffs, coeffs_mean, coeffs_err);
@@ -507,6 +498,110 @@ public:
 		to_file("output/bessel1.txt", data);
 
 
+	}
+
+	// Method two compute a two-point correlation function of the form <e_ml eml'>
+	void getTwoPointFunction(size_type m, complex_matrix<number_type> & TwoPointFunction, complex_matrix<number_type> & TwoPointFunction_err, const gsl_interp_type* interpolation_method, std::time_t start)
+	{
+		/* Fourier-decompose the profiles */
+		decompose_azimuthal();
+		initialize_r_interpolation(interpolation_method);
+
+		std::time_t current_time = std::time(nullptr);
+		std::cout << current_time-start << "s: " << "Profiles have been Fourier-decomposed.\n"; 
+
+
+		/* Bessel-decompose profile parts with quantum number m */
+
+		size_type lMax = TwoPointFunction.colsize();
+
+		// computed necessary bessel zeros
+		get_Bessel_deriv_zeros(m+1, lMax);
+
+		// compute two-point object e_ml e_ml' for each profile
+
+		std::vector<complex_matrix<number_type>> Two_point_objects(0);
+
+		for (size_type k = 0; k < profiles_.size(); ++k)
+		{
+			complex_matrix<number_type> current_coeff(1, lMax);
+			BesselDecomposeProfile(k, m, current_coeff);
+			// fill current two-point object e_ml1 w_ml2
+			complex_matrix<number_type> current_two_point(lMax, lMax);
+			for (size_type l1 = 0; l1 < current_two_point.rowsize(); ++l1)
+			{
+				for (size_type l2 = 0; l2 < current_two_point.colsize(); ++l2)
+				{
+					number_type eml1_real = current_coeff.get_real(0, l1);
+					number_type eml1_imag = current_coeff.get_imag(0, l1);
+					number_type eml2_real = current_coeff.get_real(0, l2);
+					number_type eml2_imag = -current_coeff.get_imag(0, l2);
+
+					number_type result_real = eml1_real*eml2_real - eml1_imag*eml2_imag;
+					number_type result_imag = eml1_real*eml2_imag + eml2_real*eml1_imag;
+					current_two_point.set_entry(l1, l2, result_real, result_imag);
+				}
+			}
+			
+			Two_point_objects.push_back(current_two_point);
+		}
+
+		current_time = std::time(nullptr);
+		std::cout << current_time-start << "s: " << "Two-point objects have been computed.\n"; 
+
+		// Compute ensemble mean of Fourier-Bessel coefficients
+		mean(Two_point_objects, TwoPointFunction, TwoPointFunction_err);
+
+
+	}
+
+	// Bessel-decompose profile k and save data to current_coeff matrix
+	void BesselDecomposeProfile(size_type k , complex_matrix<number_type> & current_coeff)
+	{
+		size_type mMax = current_coeff.rowsize()-1;
+		size_type lMax = current_coeff.colsize();	
+
+		for (size_type m = 0; m <= mMax; ++m)
+		{
+			for (size_type l = 1; l <= lMax; ++l)
+			{
+				number_type real = integ_fourier_r(k, m, l, 0, R_-grid_step_)/c(m, l);
+				number_type imag;
+				if (m == 0)
+				{
+					imag = 0;
+				}
+				else
+				{
+					imag = integ_fourier_r(k, Nm_-m, l, 0, R_-grid_step_)/c(m, l);
+				}
+				current_coeff.set_entry(m, l-1, real, imag);
+			}
+		}
+	}
+
+	// Bessel-decompose profile k with respect to mode m and save data to current_coeff matrix
+	void BesselDecomposeProfile(size_type k, size_type m, complex_matrix<number_type> & current_coeff)
+	{
+		assert(current_coeff.rowsize() == 1);
+		size_type lMax = current_coeff.colsize();	
+
+		
+		for (size_type l = 1; l <= lMax; ++l)
+		{
+			number_type real = integ_fourier_r(k, m, l, 0, R_-grid_step_)/c(m, l);
+			number_type imag;
+			if (m == 0)
+			{
+				imag = 0;
+			}
+			else
+			{
+				imag = integ_fourier_r(k, Nm_-m, l, 0, R_-grid_step_)/c(m, l);
+			}
+			current_coeff.set_entry(0, l-1, real, imag);
+		}
+	
 	}
 
 	/* Do a FFT decomposition of energy density profiles with respect to phi
