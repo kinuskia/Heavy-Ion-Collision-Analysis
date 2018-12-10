@@ -19,7 +19,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	// Read in and pre-process Trento data
 	Collision<number_type> PbPb(10, .2); // Create Collision object
-	PbPb.get_Bessel_deriv_zeros("auxiliary/bessel_zeros.txt", 11, 5);
+	//PbPb.get_Bessel_deriv_zeros("auxiliary/bessel_deriv_zeros.txt", 11, 5);
 
 	PbPb.read_in(filename, fileformat, n_files); // read in Trento event files
 
@@ -41,8 +41,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	std::string outfile = "output/decomposition";
 	outfile += impact_parameter;
 	outfile += ".txt";
-	size_type mMax = 5;
-	size_type lMax = 20;
+	size_type mMax = 10;
+	size_type lMax = 10;
 	complex_matrix<number_type> Fourier_Bessel_coeffs_mean(mMax+1, lMax);
 	complex_matrix<number_type> Fourier_Bessel_coeffs_err(mMax+1, lMax);
 	const gsl_interp_type* r_interpolation_method = gsl_interp_cspline;

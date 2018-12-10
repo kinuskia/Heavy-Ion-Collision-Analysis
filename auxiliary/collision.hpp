@@ -16,6 +16,7 @@
 #include <gsl/gsl_spline.h>
 #include <gsl/gsl_sf_bessel.h>
 #include "complex_matrix.hpp"
+#include "bessel_deriv_zero.hpp"
 
 
 // Functions to transform polar coordinates to cartesian coordinates
@@ -135,17 +136,25 @@ public:
 		}
 	}
 
-	// Read in zeros of first derivative of the Bessel function J from text file (l'th zero crossing of J'_m)
-	void get_Bessel_deriv_zeros(std::string source, size_type m, size_type l)
+	// Compute zeros of first derivative of the Bessel function J (l'th zero crossing of J'_m)
+	void get_Bessel_deriv_zeros(size_type m, size_type l)
 	{
 		bessel_deriv_zeros_ = gsl_matrix_alloc(m, l);
-		read_data(source, bessel_deriv_zeros_, 1);
+		number_type eps_rel = 1.e-15;
+		size_type max_iter = 100;
+		for (size_type i = 0; i < bessel_deriv_zeros_->size1; ++i)
+		{
+			for (size_type j = 0; j < bessel_deriv_zeros_->size2; ++j)
+			{
+				gsl_matrix_set(bessel_deriv_zeros_, i, j, find_bessel_deriv_root(i, j+1, eps_rel, max_iter));
+			}
+		}
 	}
 
 	number_type Bessel_zero(size_type m, size_type l)
 	{
-		//return gsl_matrix_get(bessel_deriv_zeros_, m, l-1);
-		return gsl_sf_bessel_zero_Jnu(m, l);
+		return gsl_matrix_get(bessel_deriv_zeros_, m, l-1);
+		//return gsl_sf_bessel_zero_Jnu(m, l);
 	}
 
 
@@ -339,22 +348,35 @@ public:
 		return gsl_sf_bessel_Jn(m, Bessel_zero(m, l)*rho(r));
 	}
 
-	// // evaluate Bessel coefficient c_ml (if one uses J' zeros)
+	// evaluate Bessel coefficient c_ml (if one uses J' zeros)
+	number_type c (size_type m, size_type l)
+	{ 
+		if (m == 0 && l == 1)
+		{
+			return 0.5;
+		}
+		else if (m == 0 && l > 1)
+		{
+			number_type zero = Bessel_zero(m, l-1);
+			return gsl_sf_bessel_Jn(m, zero)*gsl_sf_bessel_Jn(m, zero)*(zero*zero - m*m)/2./zero/zero;
+		}
+		else
+		{
+			number_type zero = Bessel_zero(m, l);
+			return gsl_sf_bessel_Jn(m, zero)*gsl_sf_bessel_Jn(m, zero)*(zero*zero - m*m)/2./zero/zero;
+		}
+		
+	}
+
+	// // evaluate Bessel coefficient c_ml (if one uses J zeros)
 	// number_type c (size_type m, size_type l)
 	// {
-	// 	number_type zero = Bessel_zero(m, l) ; 
-	// 	return gsl_sf_bessel_Jn(m, zero)*gsl_sf_bessel_Jn(m, zero)*(zero*zero - m*m)/2./zero/zero;
+	// 	number_type zero = Bessel_zero(m, l); 
+	// 	// value of J' at zero
+	// 	number_type h = 0.001;
+	// 	number_type deriv = (gsl_sf_bessel_Jn(m, zero+h)-gsl_sf_bessel_Jn(m, zero-h))/2./h;
+	// 	return (deriv*deriv)/2.;
 	// }
-
-	// evaluate Bessel coefficient c_ml (if one uses J zeros)
-	number_type c (size_type m, size_type l)
-	{
-		number_type zero = Bessel_zero(m, l); 
-		// value of J' at zero
-		number_type h = 0.001;
-		number_type deriv = (gsl_sf_bessel_Jn(m, zero+h)-gsl_sf_bessel_Jn(m, zero-h))/2./h;
-		return (deriv*deriv)/2.;
-	}
 
 
 	// map r to normalized variable rho \in (0, 1) using W(r)
@@ -402,51 +424,16 @@ public:
 		decompose_azimuthal();
 		initialize_r_interpolation(interpolation_method);
 
-		// print energy-r curves for some numbers m
-		for (size_type m = 0; m < 4; ++m)
-		{
-			gsl_vector* radii = gsl_vector_alloc(Nr_);
-			gsl_vector* e_mean = gsl_vector_alloc(Nr_);
-			gsl_vector* e_err = gsl_vector_alloc(Nr_);
-
-			average_fourier(m, radii, e_mean, e_err);
-
-			std::string filename = "output/e_ave_fourier";
-			filename += std::to_string(m);
-			filename += ".txt";
-
-			to_file(filename, radii, e_mean, e_err);
-
-			gsl_vector_free(radii);
-			gsl_vector_free(e_mean);
-			gsl_vector_free(e_err);
-
-		}
-		// size_type N = 100;
-		// std::vector<number_type> radii(N);
-		// std::vector<number_type> bessels01(N);
-		// std::vector<number_type> bessels02(N);
-		// std::vector<number_type> bessels03(N);
-		// for (size_type i = 0; i < N; ++i)
-		// {
-		// 	radii[i] = (R_-grid_step_)*i/N;
-		// 	bessels01[i] = Bessel(0, 1, radii[i])*W(radii[i])*R_*R_;
-		// 	bessels02[i] = Bessel(0, 2, radii[i])*W(radii[i])*R_*R_;
-		// 	bessels03[i] = Bessel(0, 3, radii[i])*W(radii[i])*R_*R_;
-			
-		// }
-		// std::vector<std::vector<number_type>> data(4);
-		// data[0] = radii;
-		// data[1] = bessels01;
-		// data[2] = bessels02;
-		// data[3] = bessels03;
-		// to_file("output/bessel.txt", data);
-
 
 		// // Bessel decomposition
 
 		size_type mMax = coeffs_mean.rowsize()-1;
 		size_type lMax = coeffs_mean.colsize();
+
+		// computed necessary bessel zeros
+		get_Bessel_deriv_zeros(mMax+1, lMax);
+
+		// compute Fourier-Bessel coeffs
 
 		std::vector<complex_matrix<number_type>> Fourier_Bessel_coeffs(0);
 
@@ -475,6 +462,49 @@ public:
 
 		// Compute ensemble mean of Fourier-Bessel coefficients
 		mean(Fourier_Bessel_coeffs, coeffs_mean, coeffs_err);
+
+
+		// print energy-r curves for some numbers m
+		for (size_type m = 0; m < 4; ++m)
+		{
+			gsl_vector* radii = gsl_vector_alloc(Nr_);
+			gsl_vector* e_mean = gsl_vector_alloc(Nr_);
+			gsl_vector* e_err = gsl_vector_alloc(Nr_);
+
+			average_fourier(m, radii, e_mean, e_err);
+
+			std::string filename = "output/e_ave_fourier";
+			filename += std::to_string(m);
+			filename += ".txt";
+
+			to_file(filename, radii, e_mean, e_err);
+
+			gsl_vector_free(radii);
+			gsl_vector_free(e_mean);
+			gsl_vector_free(e_err);
+
+		}
+
+		// Print some bessel curves
+		size_type N = 100;
+		std::vector<number_type> radii(N);
+		std::vector<number_type> bessels11(N);
+		std::vector<number_type> bessels12(N);
+		std::vector<number_type> bessels13(N);
+		for (size_type i = 0; i < N; ++i)
+		{
+			radii[i] = (R_-grid_step_)*i/N;
+			bessels11[i] = Bessel(1, 1, radii[i])*W(radii[i])*R_*R_;
+			bessels12[i] = Bessel(1, 2, radii[i])*W(radii[i])*R_*R_;
+			bessels13[i] = Bessel(1, 3, radii[i])*W(radii[i])*R_*R_;
+			
+		}
+		std::vector<std::vector<number_type>> data(4);
+		data[0] = radii;
+		data[1] = bessels11;
+		data[2] = bessels12;
+		data[3] = bessels13;
+		to_file("output/bessel1.txt", data);
 
 
 	}
@@ -701,11 +731,24 @@ double interpolate_at_m_wrapper(double r, void* params)
 	std::size_t m = params_->mode_m;
 	std::size_t l = params_->mode_l;
 	size_type Nm = params_->pt_Collision->Nm();
+
+
 	if (m < Nm/2)
 	{
-		return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l, r)); // times r because of dr measure
+		if (m == 0 && l == 1)
+		{
+			return (params_->pt_Collision->interpolate_fourier(k, m, r))*r; // times r because of dr measure
+		}
+		else if (m == 0 && l > 1)
+		{
+			return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l-1, r));
+		}
+		else
+		{
+			return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l, r)); // times r because of dr measure
+		}
 	}
-	else // m> Nm/2 calls refer to the imaginary part of E_(Nm-m) (r)
+	else // m> Nm/2 calls refer to the imaginary part of E_(Nm-m) (r). No case distinction needed because imaginary part = 0 for m=0
 	{
 		return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(Nm-m, l, r)); // times r because of dr measure
 	}	
