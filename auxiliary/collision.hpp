@@ -17,6 +17,7 @@
 #include <gsl/gsl_sf_bessel.h>
 #include "complex_matrix.hpp"
 #include "bessel_deriv_zero.hpp"
+#include <fstream>
 
 
 // Functions to transform polar coordinates to cartesian coordinates
@@ -47,6 +48,9 @@ public:
 	, profiles_(0)
 	, m_profiles_(0)
 	, z_profiles_(0)
+	, impact_parameters_(0)
+	, n_participants_(0)
+	, multiplicities_(0)
 	, interpolators_(0)
 	, splines_(0)
 	, xacc_(0)
@@ -75,6 +79,15 @@ public:
 	size_type Nm() const
 	{
 		return Nm_;
+	}
+
+	// free profiles
+	void free()
+	{
+		for (size_type i = 0; i < profiles_.size(); ++i)
+		{
+			gsl_matrix_free(profiles_[i]);
+		}
 	}
 
 	// function to generate the filename of data file k
@@ -107,22 +120,14 @@ public:
 		return filename;
 	}
 
-	// read in single file
-	void read_in(std::string filename)
-	{
-		gsl_matrix* data = gsl_matrix_alloc(grid_size_, grid_size_);
-		read_data(filename, data, 8);
-		profiles_.push_back(data);
-	}
 
-	// free profiles
-	void free()
-	{
-		for (size_type i = 0; i < profiles_.size(); ++i)
-		{
-			gsl_matrix_free(profiles_[i]);
-		}
-	}
+	// // read in single file
+	// void read_in(std::string filename)
+	// {
+	// 	gsl_matrix* data = gsl_matrix_alloc(grid_size_, grid_size_);
+	// 	read_data(filename, data, 8);
+	// 	profiles_.push_back(data);
+	// }
 
 	// read in data files
 	void read_in(std::string filename_begin, std::string fileformat, size_type n_files)
@@ -130,11 +135,29 @@ public:
 		for (size_type k = 0; k < n_files; ++k)
 		{
 			std::string filename = get_filename(filename_begin, fileformat, k, n_files);
+			number_type impact_param;
+			number_type n_part;
+			number_type mult;
+			
 			gsl_matrix* data = gsl_matrix_alloc(grid_size_, grid_size_);
-			read_data(filename, data, 8);
+			read_data(filename, data, impact_param, n_part, mult);
 			profiles_.push_back(data);
+			
+			impact_parameters_.push_back(impact_param);
+			n_participants_.push_back(n_part);
+			multiplicities_.push_back(mult);
 		}
 	}
+
+	void collision_specs_to_file(std::string filename) const
+	{
+		std::vector<std::vector<number_type>> columns(3);
+		columns[0] = impact_parameters_;
+		columns[1] = n_participants_;
+		columns[2] = multiplicities_;
+		to_file(filename, columns);
+	}
+
 
 	// Compute zeros of first derivative of the Bessel function J (l'th zero crossing of J'_m)
 	void get_Bessel_deriv_zeros(size_type m, size_type l)
@@ -735,6 +758,13 @@ private:
 
 	// vector of Fourier-decomposed (m, r)-profiles
 	std::vector<gsl_matrix*> m_profiles_;
+
+	// vector of impact_parameters
+	std::vector<number_type> impact_parameters_;
+	//vector of wounded nucleon number
+	std::vector<number_type> n_participants_;
+	//vector of multiplicities
+	std::vector<number_type> multiplicities_;
 
 	// x-y-interpolation objects
 	number_type* x_sites_;

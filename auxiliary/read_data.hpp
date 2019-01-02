@@ -18,10 +18,9 @@ void insert(number_type number, size_type counter, gsl_matrix* data)
 	gsl_matrix_set(data, rownumber, colnumber, number);
 }
 
-
-void read_data(std::string filename, gsl_matrix* data, size_type skip_rows = 0)
+template<typename number_type>
+void read_data(std::string filename, gsl_matrix* data, number_type & impact_parameter, number_type & n_participants, number_type & multiplicity)
 {
-	typedef double number_type;
 	std::ifstream infile(filename);
 	std::string line;
 
@@ -35,11 +34,54 @@ void read_data(std::string filename, gsl_matrix* data, size_type skip_rows = 0)
 			continue;  // ignore empty lines
 		}
 
-		if (counter_lines < skip_rows) // skip first rows if one wished so
+		if (line[0] == '#') // handle comment lines
 		{
 			counter_lines++;
-			continue;
+			if (line[2] == 'b') // get impact parameter
+			{
+				std::string impact_param_string = "";
+				for (int i = 10; i < line.length(); ++i)
+				{
+					if (std::isalnum(line[i]) || (line[i] == '.') || (line[i] == '-'))
+					{
+						impact_param_string += line[i];
+					}
+				}
+				impact_parameter = std::stod(impact_param_string);
+				continue;
+			}
+			if (line[2] == 'n') // get number of wounded nucleons
+			{
+				std::string n_part_string = "";
+				for (int i = 10; i < line.length(); ++i)
+				{
+					if (std::isalnum(line[i]) || (line[i] == '.') || (line[i] == '-'))
+					{
+						n_part_string += line[i];
+					}
+				}
+				n_participants = std::stod(n_part_string);
+				continue;
+			}
+			if (line[2] == 'm') // get multiplicity
+			{
+				std::string mult_string = "";
+				for (int i = 10; i < line.length(); ++i)
+				{
+					if (std::isalnum(line[i]) || (line[i] == '.') || (line[i] == '-'))
+					{
+						mult_string += line[i];
+					}
+				}
+				multiplicity = std::stod(mult_string);
+				continue;
+			}
+			else
+			{
+				continue;
+			}
 		}
+		
 
 		bool end_of_number = true;
 		std::string numberstring = "";

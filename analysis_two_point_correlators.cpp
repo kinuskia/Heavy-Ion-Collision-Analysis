@@ -32,6 +32,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	PbPb.centralize(); // shift data so that barycentre at origin
 
 	std::time_t current_time = std::time(nullptr);
+	std::cout << "m: " << m << "\n";
 	std::cout << current_time-start << "s: " << "Data has been read in and normalized.\n"; 
 
 	// set interpolation method: gsl_interp2d_bicubic or gsl_interp2d_bilinear
