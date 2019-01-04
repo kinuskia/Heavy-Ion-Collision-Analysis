@@ -4,8 +4,10 @@ cd /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion
 
 
 # Create the specific Trento script (name: PbPb.txt)
-NEVENTS=100000
-./trento_generator $NEVENTS 0 20 PbPb.txt
+NEVENTS=10000
+# DESTINATION=/Volumes/MAC/Trento/PbPb
+DESTINATION=‎⁨Trento/PbPb
+./trento_generator $NEVENTS 0 20 $DESTINATION PbPb.txt
 
 # Launch Trento
 /Users/Kianusch/.local/bin/trento -c PbPb.txt
@@ -16,6 +18,6 @@ rm -rf PbPb.txt
 # Evaluate centrality of Trento files with name Trento/PbPb.dat, 
 # each folder having 1000 files
 
-./Centrality Trento/PbPb .dat $NEVENTS
+./Centrality $DESTINATION .dat $NEVENTS
 
 

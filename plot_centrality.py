@@ -53,7 +53,7 @@ plt.savefig("plots/centrality.pdf", format="pdf", bbox_inches="tight")
 
 def centrality_class(p):
 	return np.percentile(mult, 100-p)
-bins2 = 64
+bins2 = 32
 
 plt.figure(6)
 plt.hist(b[mult>centrality_class(5)], bins2)

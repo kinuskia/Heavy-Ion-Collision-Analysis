@@ -126,4 +126,77 @@ void read_data(std::string filename, gsl_matrix* data, number_type & impact_para
 
 }
 
+// overload if one is just interested in the collision specs but bot the profiles
+template<typename number_type>
+void read_data(std::string filename, number_type & impact_parameter, number_type & n_participants, number_type & multiplicity)
+{
+	std::ifstream infile(filename);
+	std::string line;
+
+	size_type counter_numbers = 0;
+	size_type counter_lines = 0;
+	while (infile)
+	{
+		std::getline(infile, line); // Read in current line
+		if (line == "")
+		{
+			continue;  // ignore empty lines
+		}
+
+		if (line[0] == '#') // handle comment lines
+		{
+			counter_lines++;
+			if (line[2] == 'b') // get impact parameter
+			{
+				std::string impact_param_string = "";
+				for (int i = 10; i < line.length(); ++i)
+				{
+					if (std::isalnum(line[i]) || (line[i] == '.') || (line[i] == '-'))
+					{
+						impact_param_string += line[i];
+					}
+				}
+				impact_parameter = std::stod(impact_param_string);
+				continue;
+			}
+			if (line[2] == 'n') // get number of wounded nucleons
+			{
+				std::string n_part_string = "";
+				for (int i = 10; i < line.length(); ++i)
+				{
+					if (std::isalnum(line[i]) || (line[i] == '.') || (line[i] == '-'))
+					{
+						n_part_string += line[i];
+					}
+				}
+				n_participants = std::stod(n_part_string);
+				continue;
+			}
+			if (line[2] == 'm') // get multiplicity
+			{
+				std::string mult_string = "";
+				for (int i = 10; i < line.length(); ++i)
+				{
+					if (std::isalnum(line[i]) || (line[i] == '.') || (line[i] == '-'))
+					{
+						mult_string += line[i];
+					}
+				}
+				multiplicity = std::stod(mult_string);
+				continue;
+			}
+			else
+			{
+				continue;
+			}
+		}
+		else
+		{
+			break;
+		}
+		
+	}
+
+}
+
 #endif

@@ -2,7 +2,7 @@
 #include <fstream>
 #include <string>
 
-void generate_trento_script(std::string n_events, std::string impact_parameter_min, std::string impact_parameter_max, std::string filename)
+void generate_trento_script(std::string n_events, std::string impact_parameter_min, std::string impact_parameter_max, std::string destination, std::string filename)
 {
 	// Create correct filename
 		std::ofstream outfile(filename);
@@ -14,7 +14,9 @@ void generate_trento_script(std::string n_events, std::string impact_parameter_m
 
 		// don't print event properties to stdout, save to text file
 		outfile << "quiet = true" << "\n";
-		outfile << "output = /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion-Collision-Analysis/Trento/PbPb";
+		//outfile << "output = /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion-Collision-Analysis/Trento/PbPb";
+		outfile << "output = " << destination << "\n";
+		//outfile << "output = /Volumes/MAC/Trento/PbPb";
 		outfile << "\n";
 
 		outfile << "reduced-thickness = 0" << "\n";
@@ -35,10 +37,10 @@ void generate_trento_script(std::string n_events, std::string impact_parameter_m
 
 // Create a Trento collision script of given name and impact parameter
 
-int main (int argc, char* argv[]) // command-line input: n_events, impact parameter min , max, file name
+int main (int argc, char* argv[]) // command-line input: n_events, impact parameter min , max, destination, file name
 {
 
-	generate_trento_script(argv[1], argv[2], argv[3], argv[4]);
+	generate_trento_script(argv[1], argv[2], argv[3], argv[4], argv[5]);
 
 	return 0;
 }

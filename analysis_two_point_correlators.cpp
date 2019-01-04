@@ -41,7 +41,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 
 	/*
-	compute two point correlators with fixed m=m': <e_ml e_ml'>
+	compute two point correlators with fixed m=-m': <e_ml e_(-m)l'>
 	*/
 	// Create outfile name
 	std::string outfile = "output/two_point_b";

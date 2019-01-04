@@ -51,6 +51,8 @@ public:
 	, impact_parameters_(0)
 	, n_participants_(0)
 	, multiplicities_(0)
+	, percentiles_(0)
+	, percent_mult_(0)
 	, interpolators_(0)
 	, splines_(0)
 	, xacc_(0)
@@ -130,7 +132,7 @@ public:
 	// }
 
 	// read in data files
-	void read_in(std::string filename_begin, std::string fileformat, size_type n_files)
+	void read_in(std::string filename_begin, std::string fileformat, size_type n_files, bool import_profiles = true)
 	{
 		for (size_type k = 0; k < n_files; ++k)
 		{
@@ -138,10 +140,16 @@ public:
 			number_type impact_param;
 			number_type n_part;
 			number_type mult;
-			
-			gsl_matrix* data = gsl_matrix_alloc(grid_size_, grid_size_);
-			read_data(filename, data, impact_param, n_part, mult);
-			profiles_.push_back(data);
+			if (import_profiles)
+			{	
+				gsl_matrix* data = gsl_matrix_alloc(grid_size_, grid_size_);
+				read_data(filename, data, impact_param, n_part, mult);
+				profiles_.push_back(data);
+			}
+			else
+			{
+				read_data(filename, impact_param, n_part, mult);	
+			}
 			
 			impact_parameters_.push_back(impact_param);
 			n_participants_.push_back(n_part);
@@ -156,6 +164,20 @@ public:
 		columns[1] = n_participants_;
 		columns[2] = multiplicities_;
 		to_file(filename, columns);
+	}
+
+	// compute certain multiplicity percentiles
+	void get_percentiles(const std::vector<number_type> & percentiles)
+	{
+		std::vector<number_type> multip_copy = multiplicities_;
+		size_type N = multiplicities_.size();
+		for (size_type i = 0; i< percentiles.size(); ++i)
+		{
+			percentiles_.push_back(percentiles[i]);
+			size_type dn = (N-1)*(100-percentiles[i])/100;
+			std::nth_element(multip_copy.begin(), multip_copy.begin()+dn, multip_copy.end());
+			percent_mult_.push_back(multip_copy[dn]);
+		}
 	}
 
 
@@ -523,16 +545,21 @@ public:
 
 	}
 
-	// Method two compute a two-point correlation function of the form <e_ml eml'>
-	void getTwoPointFunction(size_type m, complex_matrix<number_type> & TwoPointFunction, complex_matrix<number_type> & TwoPointFunction_err, const gsl_interp_type* interpolation_method, std::time_t start)
+	// outsource certain evaluations of getTwoPointFunction
+	void initialize_two_point_evaluations(const gsl_interp_type* interpolation_method, std::time_t start)
 	{
 		/* Fourier-decompose the profiles */
 		decompose_azimuthal();
 		initialize_r_interpolation(interpolation_method);
 
 		std::time_t current_time = std::time(nullptr);
-		std::cout << current_time-start << "s: " << "Profiles have been Fourier-decomposed.\n"; 
+		std::cout << current_time-start << "s: " << "Profiles have been Fourier-decomposed.\n"; 	
+	}
 
+	// Method two compute a two-point correlation function of the form <e_ml eml'>
+	void getTwoPointFunction(size_type m, size_type centrality_index, complex_matrix<number_type> & TwoPointFunction, complex_matrix<number_type> & TwoPointFunction_err, const gsl_interp_type* interpolation_method, std::time_t start)
+	{
+		std::time_t current_time = std::time(nullptr);
 
 		/* Bessel-decompose profile parts with quantum number m */
 
@@ -541,12 +568,23 @@ public:
 		// computed necessary bessel zeros
 		get_Bessel_deriv_zeros(m+1, lMax);
 
-		// compute two-point object e_ml e_ml' for each profile
+		// compute two-point object e_ml e_ml' for each profile in the centrality class
 
 		std::vector<complex_matrix<number_type>> Two_point_objects(0);
 
 		for (size_type k = 0; k < profiles_.size(); ++k)
 		{
+			// Determine if profile is in centrality class
+			assert(centrality_index != 0);
+			number_type mult_min = percent_mult_[centrality_index];
+			number_type mult_max = percent_mult_[centrality_index-1];
+			number_type mult = multiplicities_[k];
+			if (mult < mult_min || mult > mult_max )
+			{
+				continue;
+			}
+
+
 			complex_matrix<number_type> current_coeff(1, lMax);
 			BesselDecomposeProfile(k, m, current_coeff);
 			// fill current two-point object e_ml1 w_ml2
@@ -558,7 +596,7 @@ public:
 					number_type eml1_real = current_coeff.get_real(0, l1);
 					number_type eml1_imag = current_coeff.get_imag(0, l1);
 					number_type eml2_real = current_coeff.get_real(0, l2);
-					number_type eml2_imag = -current_coeff.get_imag(0, l2);
+					number_type eml2_imag = -current_coeff.get_imag(0, l2); // minus sign because we want -m (complex conjugate)
 
 					number_type result_real = eml1_real*eml2_real - eml1_imag*eml2_imag;
 					number_type result_imag = eml1_real*eml2_imag + eml2_real*eml1_imag;
@@ -765,6 +803,11 @@ private:
 	std::vector<number_type> n_participants_;
 	//vector of multiplicities
 	std::vector<number_type> multiplicities_;
+
+	// vector of percentiles of interest
+	std::vector<number_type> percentiles_;
+	// corresponding multiplicities
+	std::vector<number_type> percent_mult_;
 
 	// x-y-interpolation objects
 	number_type* x_sites_;
