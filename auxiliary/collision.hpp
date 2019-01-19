@@ -596,8 +596,14 @@ public:
 					number_type eml1_real = current_coeff.get_real(0, l1);
 					number_type eml1_imag = current_coeff.get_imag(0, l1);
 					number_type eml2_real = current_coeff.get_real(0, l2);
-					number_type eml2_imag = -current_coeff.get_imag(0, l2); // minus sign because we want -m (complex conjugate)
+					number_type eml2_imag = -current_coeff.get_imag(0, l2)*(-1); // minus sign because we want -m (complex conjugate) e_(-m,l) = (-1)^m e*_(m,l)
 
+					if (m%2 == 1) // if m odd, we need a (-1)^m prefactor
+					{
+						eml2_real *= -1.;
+						eml2_imag *= -1.;
+					}
+					
 					number_type result_real = eml1_real*eml2_real - eml1_imag*eml2_imag;
 					number_type result_imag = eml1_real*eml2_imag + eml2_real*eml1_imag;
 					current_two_point.set_entry(l1, l2, result_real, result_imag);

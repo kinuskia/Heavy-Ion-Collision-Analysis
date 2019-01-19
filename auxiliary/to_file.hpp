@@ -11,6 +11,7 @@
 void to_file(std::string filename, std::vector<gsl_vector*> data_columns)
 {
 	typedef double number_type;
+	typedef std::size_t size_type;
 	std::ofstream outfile(filename);
 	for (size_type i = 0; i < data_columns[0]->size; ++i)
 	{
@@ -47,6 +48,7 @@ void to_file(std::string filename, gsl_vector* r, gsl_vector* E, gsl_vector* dE)
 template<typename number_type>
 void to_file(std::string filename, std::vector<std::vector<number_type>> data_columns)
 {
+	typedef std::size_t size_type;
 	std::ofstream outfile(filename);
 	for (size_type i = 0; i < data_columns[0].size(); ++i)
 	{
