@@ -14,7 +14,6 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	// Evaluate command-line input
 	std::string filename = argv[1];
 	std::string impact_parameter = argv[3];
-	filename += impact_parameter;
 	filename += "/";
 	std::string fileformat = argv[2];
 	size_type n_files = to_size_t(argv[4]);

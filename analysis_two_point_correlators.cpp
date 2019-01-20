@@ -14,7 +14,6 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	// Evaluate command-line input
 	std::string filename = argv[1];
 	std::string impact_parameter = argv[3];
-	filename += impact_parameter;
 	filename += "/";
 	std::string fileformat = argv[2];
 	size_type m = to_size_t(argv[4]);
@@ -43,6 +42,14 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	/*
 	compute two point correlators with fixed m=-m': <e_ml e_(-m)l'>
 	*/
+
+	// Create one centrality class
+	std::vector<number_type> classes(2);
+	classes[0] = 0;
+	classes[1] = 100;
+	PbPb.get_percentiles(classes);
+
+
 	// Create outfile name
 	std::string outfile = "output/two_point_b";
 	outfile += impact_parameter;
@@ -54,7 +61,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	complex_matrix<number_type> TwoPointFunction(lMax, lMax);
 	complex_matrix<number_type> TwoPointFunction_err(lMax, lMax);
 	const gsl_interp_type* r_interpolation_method = gsl_interp_cspline;
-	PbPb.getTwoPointFunction(m, TwoPointFunction, TwoPointFunction_err, r_interpolation_method, start);
+	PbPb.initialize_two_point_evaluations(r_interpolation_method, start);
+	PbPb.getTwoPointFunction(m, 1, TwoPointFunction, TwoPointFunction_err, start);
 
 	//Fourier_Bessel_coeffs_mean.print();
 

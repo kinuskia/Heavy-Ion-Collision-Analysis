@@ -557,7 +557,7 @@ public:
 	}
 
 	// Method two compute a two-point correlation function of the form <e_ml eml'>
-	void getTwoPointFunction(size_type m, size_type centrality_index, complex_matrix<number_type> & TwoPointFunction, complex_matrix<number_type> & TwoPointFunction_err, const gsl_interp_type* interpolation_method, std::time_t start)
+	void getTwoPointFunction(size_type m, size_type centrality_index, complex_matrix<number_type> & TwoPointFunction, complex_matrix<number_type> & TwoPointFunction_err, std::time_t start)
 	{
 		std::time_t current_time = std::time(nullptr);
 
@@ -596,7 +596,7 @@ public:
 					number_type eml1_real = current_coeff.get_real(0, l1);
 					number_type eml1_imag = current_coeff.get_imag(0, l1);
 					number_type eml2_real = current_coeff.get_real(0, l2);
-					number_type eml2_imag = -current_coeff.get_imag(0, l2)*(-1); // minus sign because we want -m (complex conjugate) e_(-m,l) = (-1)^m e*_(m,l)
+					number_type eml2_imag = current_coeff.get_imag(0, l2)*(-1); // minus sign because we want -m (complex conjugate) e_(-m,l) = (-1)^m e*_(m,l)
 
 					if (m%2 == 1) // if m odd, we need a (-1)^m prefactor
 					{
