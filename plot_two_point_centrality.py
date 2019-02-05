@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np 
 
 modes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+#modes = [0, 1]
 percentiles = [0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 counter_fig = 0
 for mode in modes:

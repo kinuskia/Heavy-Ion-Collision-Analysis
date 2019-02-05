@@ -61,7 +61,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	complex_matrix<number_type> TwoPointFunction(lMax, lMax);
 	complex_matrix<number_type> TwoPointFunction_err(lMax, lMax);
 	const gsl_interp_type* r_interpolation_method = gsl_interp_cspline;
-	PbPb.initialize_two_point_evaluations(r_interpolation_method, start);
+	PbPb.initialize_n_point_evaluations(r_interpolation_method, start);
+	
 	PbPb.getTwoPointFunction(m, 1, TwoPointFunction, TwoPointFunction_err, start);
 
 	//Fourier_Bessel_coeffs_mean.print();

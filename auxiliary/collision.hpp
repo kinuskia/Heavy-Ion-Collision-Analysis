@@ -62,12 +62,14 @@ public:
 	, racc_(0) 
 	, Nm_(128)
 	, Nr_(size_type(grid_max/grid_step))
+	, W_interpolators_(0)
+	, W_splines_(0)
+	, W_acc_(0)
 	{
 		// initialize grid sites
 		x_sites_ = new number_type[grid_size_];
 		y_sites_ = new number_type[grid_size_];
 		r_sites_ = new number_type[Nr_];
-		W_sites_ = new number_type[Nr_];
 		R_ = grid_max_ - grid_step_;
 		for (size_type i = 0; i < grid_size_; ++i)
 		{
@@ -177,6 +179,7 @@ public:
 			size_type dn = (N-1)*(100-percentiles[i])/100;
 			std::nth_element(multip_copy.begin(), multip_copy.begin()+dn, multip_copy.end());
 			percent_mult_.push_back(multip_copy[dn]);
+			std::cout << percentiles_[i] << " " << percent_mult_[i] << "\n";
 		}
 	}
 
@@ -359,7 +362,7 @@ public:
 
 	// integrate over r at fixed Fourier mode m and Bessel(m,l) as weight function with gsl integration routine
 	// (only declaration, it is defined outside this class, see below)
-	number_type integ_fourier_r(size_type k, size_type m, size_type l, number_type r_lower, number_type r_upper);
+	number_type integ_fourier_r(size_type k, size_type centrality_index, size_type m, size_type l, number_type r_lower, number_type r_upper);
 	
 
 
@@ -377,20 +380,20 @@ public:
 	}
 
 	// interpolate weight function
-	number_type W(number_type r)
+	number_type W(number_type r, size_type centrality_index)
 	{
-		return gsl_spline_eval(W_spline_, r, W_acc_);
+		return gsl_spline_eval(W_splines_[centrality_index-1], r, W_acc_[centrality_index-1]);
 	}
 
 	// Evaluate appropriate Bessel function
-	number_type Bessel(size_type m, size_type l, number_type r)
+	number_type Bessel(size_type m, size_type l, number_type r, size_type centrality_index)
 	{
 		// // Verify the zero crossing needed is available
 		// assert(l>0);
 		// assert(l <= bessel_deriv_zeros_->size2);
 		// assert(m < bessel_deriv_zeros_->size1);
 
-		return gsl_sf_bessel_Jn(m, Bessel_zero(m, l)*rho(r));
+		return gsl_sf_bessel_Jn(m, Bessel_zero(m, l)*rho(r, centrality_index));
 	}
 
 	// evaluate Bessel coefficient c_ml (if one uses J' zeros)
@@ -426,7 +429,7 @@ public:
 
 	// map r to normalized variable rho \in (0, 1) using W(r)
 	// only declared, definition outside class
-	number_type rho(number_type r);
+	number_type rho(number_type r, size_type centrality_index);
 
 
 	// average over azimuthal angle save to data storage
@@ -461,16 +464,9 @@ public:
 		}
 	}
 
-	void FourierBesselDecompose(complex_matrix<number_type> & coeffs_mean, complex_matrix<number_type> & coeffs_err, const gsl_interp_type* interpolation_method, std::time_t start)
+	// Compute one-point correlation function (=expectation value e_ml) for given centrality class
+	void getOnePointFunction(size_type centrality_index, complex_matrix<number_type> & coeffs_mean, complex_matrix<number_type> & coeffs_err, std::time_t start)
 	{
-		// // Fourier decomposition
-		// 
-
-		decompose_azimuthal();
-		initialize_r_interpolation(interpolation_method);
-
-		std::time_t current_time = std::time(nullptr);
-		std::cout << current_time-start << "s: " << "Profiles have been Fourier-decomposed.\n"; 
 
 
 		// // Bessel decomposition
@@ -487,66 +483,74 @@ public:
 
 		for (size_type k = 0; k < profiles_.size(); ++k)
 		{
+			// Skip profile if not in centrality class
+			if (!is_in_centrality_class(k, centrality_index))
+			{
+				continue;
+			}
 			complex_matrix<number_type> current_coeff(mMax+1, lMax);
-			BesselDecomposeProfile(k, current_coeff);
+			BesselDecomposeProfile(k, centrality_index, current_coeff);
 			
 			Fourier_Bessel_coeffs.push_back(current_coeff);
 		}
 
-		current_time = std::time(nullptr);
+		std::time_t current_time = std::time(nullptr);
 		std::cout << current_time-start << "s: " << "Profiles have been Bessel-decomposed.\n"; 
 
 		// Compute ensemble mean of Fourier-Bessel coefficients
 		mean(Fourier_Bessel_coeffs, coeffs_mean, coeffs_err);
 
 
-		// print energy-r curves for some numbers m
-		for (size_type m = 0; m < 4; ++m)
-		{
-			gsl_vector* radii = gsl_vector_alloc(Nr_);
-			gsl_vector* e_mean = gsl_vector_alloc(Nr_);
-			gsl_vector* e_err = gsl_vector_alloc(Nr_);
+		// CAREFUL: commented lines no longer work (is now centrality class specific)!!
 
-			average_fourier(m, radii, e_mean, e_err);
+		// // print energy-r curves for some numbers m
+		// for (size_type m = 0; m < 4; ++m)
+		// {
+		// 	gsl_vector* radii = gsl_vector_alloc(Nr_);
+		// 	gsl_vector* e_mean = gsl_vector_alloc(Nr_);
+		// 	gsl_vector* e_err = gsl_vector_alloc(Nr_);
 
-			std::string filename = "output/e_ave_fourier";
-			filename += std::to_string(m);
-			filename += ".txt";
+		// 	average_fourier(m, radii, e_mean, e_err);
 
-			to_file(filename, radii, e_mean, e_err);
+		// 	std::string filename = "output/e_ave_fourier";
+		// 	filename += std::to_string(m);
+		// 	filename += ".txt";
 
-			gsl_vector_free(radii);
-			gsl_vector_free(e_mean);
-			gsl_vector_free(e_err);
+		// 	to_file(filename, radii, e_mean, e_err);
 
-		}
+		// 	gsl_vector_free(radii);
+		// 	gsl_vector_free(e_mean);
+		// 	gsl_vector_free(e_err);
 
-		// Print some bessel curves
-		size_type N = 100;
-		std::vector<number_type> radii(N);
-		std::vector<number_type> bessels11(N);
-		std::vector<number_type> bessels12(N);
-		std::vector<number_type> bessels13(N);
-		for (size_type i = 0; i < N; ++i)
-		{
-			radii[i] = (R_-grid_step_)*i/N;
-			bessels11[i] = Bessel(1, 1, radii[i])*W(radii[i])*R_*R_;
-			bessels12[i] = Bessel(1, 2, radii[i])*W(radii[i])*R_*R_;
-			bessels13[i] = Bessel(1, 3, radii[i])*W(radii[i])*R_*R_;
+		// }
+
+		
+		// // Print some bessel curves
+		// size_type N = 100;
+		// std::vector<number_type> radii(N);
+		// std::vector<number_type> bessels11(N);
+		// std::vector<number_type> bessels12(N);
+		// std::vector<number_type> bessels13(N);
+		// for (size_type i = 0; i < N; ++i)
+		// {
+		// 	radii[i] = (R_-grid_step_)*i/N;
+		// 	bessels11[i] = Bessel(1, 1, radii[i])*W(radii[i])*R_*R_;
+		// 	bessels12[i] = Bessel(1, 2, radii[i])*W(radii[i])*R_*R_;
+		// 	bessels13[i] = Bessel(1, 3, radii[i])*W(radii[i])*R_*R_;
 			
-		}
-		std::vector<std::vector<number_type>> data(4);
-		data[0] = radii;
-		data[1] = bessels11;
-		data[2] = bessels12;
-		data[3] = bessels13;
-		to_file("output/bessel1.txt", data);
+		// }
+		// std::vector<std::vector<number_type>> data(4);
+		// data[0] = radii;
+		// data[1] = bessels11;
+		// data[2] = bessels12;
+		// data[3] = bessels13;
+		// to_file("output/bessel1.txt", data);
 
 
 	}
 
 	// outsource certain evaluations of getTwoPointFunction
-	void initialize_two_point_evaluations(const gsl_interp_type* interpolation_method, std::time_t start)
+	void initialize_n_point_evaluations(const gsl_interp_type* interpolation_method, std::time_t start)
 	{
 		/* Fourier-decompose the profiles */
 		decompose_azimuthal();
@@ -565,7 +569,7 @@ public:
 
 		size_type lMax = TwoPointFunction.colsize();
 
-		// computed necessary bessel zeros
+		// compute necessary bessel zeros
 		get_Bessel_deriv_zeros(m+1, lMax);
 
 		// compute two-point object e_ml e_ml' for each profile in the centrality class
@@ -574,19 +578,15 @@ public:
 
 		for (size_type k = 0; k < profiles_.size(); ++k)
 		{
-			// Determine if profile is in centrality class
-			assert(centrality_index != 0);
-			number_type mult_min = percent_mult_[centrality_index];
-			number_type mult_max = percent_mult_[centrality_index-1];
-			number_type mult = multiplicities_[k];
-			if (mult < mult_min || mult > mult_max )
+			// Skip profile if not in centrality class
+			if (!is_in_centrality_class(k, centrality_index))
 			{
 				continue;
 			}
 
 
 			complex_matrix<number_type> current_coeff(1, lMax);
-			BesselDecomposeProfile(k, m, current_coeff);
+			BesselDecomposeProfile(k, centrality_index, m, current_coeff);
 			// fill current two-point object e_ml1 w_ml2
 			complex_matrix<number_type> current_two_point(lMax, lMax);
 			for (size_type l1 = 0; l1 < current_two_point.rowsize(); ++l1)
@@ -596,7 +596,7 @@ public:
 					number_type eml1_real = current_coeff.get_real(0, l1);
 					number_type eml1_imag = current_coeff.get_imag(0, l1);
 					number_type eml2_real = current_coeff.get_real(0, l2);
-					number_type eml2_imag = current_coeff.get_imag(0, l2)*(-1); // minus sign because we want -m (complex conjugate) e_(-m,l) = (-1)^m e*_(m,l)
+					number_type eml2_imag = current_coeff.get_imag(0, l2)*(-1.); // minus sign because we want -m (complex conjugate) e_(-m,l) = (-1)^m e*_(m,l)
 
 					if (m%2 == 1) // if m odd, we need a (-1)^m prefactor
 					{
@@ -623,7 +623,7 @@ public:
 	}
 
 	// Bessel-decompose profile k and save data to current_coeff matrix
-	void BesselDecomposeProfile(size_type k , complex_matrix<number_type> & current_coeff)
+	void BesselDecomposeProfile(size_type k, size_type centrality_index, complex_matrix<number_type> & current_coeff)
 	{
 		size_type mMax = current_coeff.rowsize()-1;
 		size_type lMax = current_coeff.colsize();	
@@ -632,7 +632,7 @@ public:
 		{
 			for (size_type l = 1; l <= lMax; ++l)
 			{
-				number_type real = integ_fourier_r(k, m, l, 0, R_-grid_step_)/c(m, l);
+				number_type real = integ_fourier_r(k, centrality_index, m, l, 0, R_-grid_step_)/c(m, l);
 				number_type imag;
 				if (m == 0)
 				{
@@ -640,7 +640,7 @@ public:
 				}
 				else
 				{
-					imag = integ_fourier_r(k, Nm_-m, l, 0, R_-grid_step_)/c(m, l);
+					imag = integ_fourier_r(k, centrality_index, Nm_-m, l, 0, R_-grid_step_)/c(m, l);
 				}
 				current_coeff.set_entry(m, l-1, real, imag);
 			}
@@ -648,7 +648,7 @@ public:
 	}
 
 	// Bessel-decompose profile k with respect to mode m and save data to current_coeff matrix
-	void BesselDecomposeProfile(size_type k, size_type m, complex_matrix<number_type> & current_coeff)
+	void BesselDecomposeProfile(size_type k, size_type centrality_index, size_type m, complex_matrix<number_type> & current_coeff)
 	{
 		assert(current_coeff.rowsize() == 1);
 		size_type lMax = current_coeff.colsize();	
@@ -656,7 +656,7 @@ public:
 		
 		for (size_type l = 1; l <= lMax; ++l)
 		{
-			number_type real = integ_fourier_r(k, m, l, 0, R_-grid_step_)/c(m, l);
+			number_type real = integ_fourier_r(k, centrality_index, m, l, 0, R_-grid_step_)/c(m, l);
 			number_type imag;
 			if (m == 0)
 			{
@@ -664,7 +664,7 @@ public:
 			}
 			else
 			{
-				imag = integ_fourier_r(k, Nm_-m, l, 0, R_-grid_step_)/c(m, l);
+				imag = integ_fourier_r(k, centrality_index, Nm_-m, l, 0, R_-grid_step_)/c(m, l);
 			}
 			current_coeff.set_entry(0, l-1, real, imag);
 		}
@@ -711,47 +711,91 @@ public:
 
 		/* 
 		Compute ensemble average of zero-th mode with yields the W(r) weight function needed for the
-		Bessel decomposition
+		Bessel decomposition -- for each centrality class
 		*/
 
-		gsl_vector* radii = gsl_vector_alloc(Nr_);
-		gsl_vector* e_mean = gsl_vector_alloc(Nr_);
-		gsl_vector* e_err = gsl_vector_alloc(Nr_);
-
-		average_fourier(0, radii, e_mean, e_err);
-		for (size_type i = 0; i < Nr_; ++i)
+		for (size_type c = 1; c < percentiles_.size(); ++c)
 		{
-			W_sites_[i] = gsl_vector_get(e_mean, i)*3.1415926;
-		}
+			gsl_vector* radii = gsl_vector_alloc(Nr_);
+			gsl_vector* e_mean = gsl_vector_alloc(Nr_);
+			gsl_vector* e_err = gsl_vector_alloc(Nr_);
+			average_fourier(0, c, radii, e_mean, e_err);
 
-		gsl_vector_free(radii);
-		gsl_vector_free(e_mean);
-		gsl_vector_free(e_err);
+			number_type* W_sites;
+			W_sites = new number_type[Nr_];
+			for (size_type i = 0; i < Nr_; ++i)
+			{
+				W_sites[i] = gsl_vector_get(e_mean, i)*3.1415926;
+			}
 
-		// Initialize interpolation objects for W(r) interpolation
-		const gsl_interp_type* interpolator = gsl_interp_cspline;
-		W_interpolator_ = interpolator;
-		gsl_spline* spline = gsl_spline_alloc(W_interpolator_, Nr_);
-		W_spline_ = spline;
-		gsl_interp_accel* acc = gsl_interp_accel_alloc();
-		W_acc_ = acc;
-		gsl_spline_init(W_spline_, r_sites_, W_sites_, Nr_);
+			gsl_vector_free(radii);
+			gsl_vector_free(e_mean);
+			gsl_vector_free(e_err);
+
+			// Initialize interpolation objects for W(r) interpolation
+			const gsl_interp_type* interpolator = gsl_interp_cspline;
+			W_interpolators_.push_back(interpolator);
+			gsl_spline* spline = gsl_spline_alloc(W_interpolators_[c-1], Nr_);
+			W_splines_.push_back(spline);
+			gsl_interp_accel* acc = gsl_interp_accel_alloc();
+			W_acc_.push_back(acc);
+			gsl_spline_init(W_splines_[c-1], r_sites_, W_sites, Nr_);
+		}	
 
 	}
 
-	// print average of Fourier decomposed data
-	void average_fourier(size_type m, gsl_vector* radii, gsl_vector* e_mean, gsl_vector* e_err)
+	// generate output file with values of W(r) for each centrality class
+	void print_W(std::string filename, size_type Nr)
+	{
+		std::vector<std::vector<number_type>> Ws(percentiles_.size());
+		for (size_type i = 0; i < Nr; ++i) // loop over radii
+		{
+			number_type radius = (R_-grid_step_) * i / Nr;
+			(Ws[0]).push_back(radius);
+			for (size_type c = 1; c < Ws.size(); ++c) // loop over centrality classes
+			{
+				(Ws[c]).push_back(W(radius, c));
+			}
+		}
+
+		to_file(filename, Ws);
+	}
+
+	bool is_in_centrality_class(size_type profile_index, size_type centrality_index)
+	{
+		assert(centrality_index != 0);
+		number_type mult_min = percent_mult_[centrality_index];
+		number_type mult_max = percent_mult_[centrality_index-1];
+		number_type mult = multiplicities_[profile_index];
+		if (mult < mult_min || mult > mult_max ) // if profile not in centrality class
+		{
+			return false;
+		}
+		else 
+		{
+			return true;
+		}
+	}
+
+	// print average of Fourier decomposed data, specifically <|E_m(r)|> for given centrality class
+	void average_fourier(size_type m, size_type centrality_index, gsl_vector* radii, gsl_vector* e_mean, gsl_vector* e_err)
 	{
 		assert(e_mean->size == Nr_);
 		for (size_type i = 0; i < Nr_; ++i) // loop over radii
 		{
 			number_type r = R_ * i / Nr_; // current radius
 			gsl_vector_set(radii, i, r);
-			gsl_vector* e_ensemble = gsl_vector_alloc(profiles_.size());
+			std::vector<number_type> e_ensemble(0);
 			number_type mean_val;
 			number_type mean_err;
 			for (size_type k = 0; k < profiles_.size(); ++k) // loop over profiles
 			{
+				// Skip profile if not in centrality class
+				if (!is_in_centrality_class(k, centrality_index))
+				{
+					continue;
+				}
+
 				number_type real_part = gsl_matrix_get(m_profiles_[k], m, i);
 				number_type imag_part;
 				if (m == 0)
@@ -765,13 +809,12 @@ public:
 
 				number_type module = sqrt(real_part*real_part+imag_part*imag_part);
 
-				gsl_vector_set(e_ensemble, k, module);
+				e_ensemble.push_back(module);
 			}
 			mean(e_ensemble, mean_val, mean_err);
 			gsl_vector_set(e_mean, i, mean_val);
 			gsl_vector_set(e_err, i, mean_err);
 
-			gsl_vector_free(e_ensemble);
 		}	
 	}
 
@@ -834,10 +877,9 @@ private:
 	std::vector<gsl_interp_accel*> racc_;
 
 	// W(r) interpolation
-	number_type* W_sites_;
-	const gsl_interp_type* W_interpolator_;
-	gsl_spline* W_spline_;
-	gsl_interp_accel* W_acc_;
+	std::vector<const gsl_interp_type*> W_interpolators_;
+	std::vector<gsl_spline*> W_splines_;
+	std::vector<gsl_interp_accel*> W_acc_;
 
 	// Miscellaneous
 	gsl_matrix* bessel_deriv_zeros_;
@@ -894,6 +936,7 @@ struct interpolate_at_m_params
 	size_type profile_index;
 	size_type mode_m;
 	size_type mode_l;
+	size_type centrality_index;
 	Collision<number_type>* pt_Collision;
 };
 
@@ -904,6 +947,7 @@ double interpolate_at_m_wrapper(double r, void* params)
 	std::size_t k = params_->profile_index;
 	std::size_t m = params_->mode_m;
 	std::size_t l = params_->mode_l;
+	std::size_t c = params_->centrality_index;
 	size_type Nm = params_->pt_Collision->Nm();
 
 
@@ -915,16 +959,16 @@ double interpolate_at_m_wrapper(double r, void* params)
 		}
 		else if (m == 0 && l > 1)
 		{
-			return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l-1, r));
+			return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l-1, r, c));
 		}
 		else
 		{
-			return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l, r)); // times r because of dr measure
+			return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l, r, c)); // times r because of dr measure
 		}
 	}
 	else // m> Nm/2 calls refer to the imaginary part of E_(Nm-m) (r). No case distinction needed because imaginary part = 0 for m=0
 	{
-		return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(Nm-m, l, r)); // times r because of dr measure
+		return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(Nm-m, l, r, c)); // times r because of dr measure
 	}	
 	
 }
@@ -932,13 +976,13 @@ double interpolate_at_m_wrapper(double r, void* params)
 // integrate over r at fixed Fourier-mode m and Bessel(m,l) as weight with gsl integration routine
 // Collision method, defined after (!) interpolate_at_m_params struct
 template<class number_type>
-number_type Collision<number_type>::integ_fourier_r(size_type k, size_type m, size_type l, number_type r_lower, number_type r_upper)
+number_type Collision<number_type>::integ_fourier_r(size_type k, size_type centrality_index, size_type m, size_type l, number_type r_lower, number_type r_upper)
 {
 	typedef std::size_t size_type;
 	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
 	number_type integral;
 	number_type error;
-	interpolate_at_m_params<size_type, number_type> params = {k, m, l, this};
+	interpolate_at_m_params<size_type, number_type> params = {k, m, l, centrality_index, this};
 
 	gsl_function F;
 	F.function = &interpolate_at_m_wrapper;
@@ -954,25 +998,26 @@ template<typename number_type>
 struct interpolate_W_params
 {
 	Collision<number_type>* pt_Collision;
+	size_type centrality_index;
 };
 
 // gsl function to call for rho(r) function
 double interpolate_W_wrapper(double r, void* params)
 {
 	interpolate_W_params<double>* params_ = (interpolate_W_params<double>*) params;
-	return (params_->pt_Collision->W(r))*r; // times r because of dr measure
+	return (params_->pt_Collision->W(r, params_->centrality_index))*r; // times r because of dr measure
 }
 
 // rho(r) function, see description above declaration in class
 // Collision method, defined after (!) interpolate_W_params struct
 template<class number_type>
-number_type Collision<number_type>::rho(number_type r)
+number_type Collision<number_type>::rho(number_type r, size_type centrality_index)
 {
 	typedef std::size_t size_type;
 	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
 	number_type integral;
 	number_type error;
-	interpolate_W_params<number_type> params = {this};
+	interpolate_W_params<number_type> params = {this, centrality_index};
 
 	gsl_function F;
 	F.function = &interpolate_W_wrapper;

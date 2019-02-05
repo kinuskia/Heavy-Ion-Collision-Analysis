@@ -40,6 +40,12 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	/*
 	compute expectation values <e_ml>
 	*/
+
+	std::vector<number_type> classes(2);
+	classes[0] = 0;
+	classes[1] = 100;
+	PbPb.get_percentiles(classes);
+
 	// Create outfile name
 	std::string outfile = "output/decomposition";
 	outfile += impact_parameter;
@@ -49,7 +55,9 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	complex_matrix<number_type> Fourier_Bessel_coeffs_mean(mMax+1, lMax);
 	complex_matrix<number_type> Fourier_Bessel_coeffs_err(mMax+1, lMax);
 	const gsl_interp_type* r_interpolation_method = gsl_interp_cspline;
-	PbPb.FourierBesselDecompose(Fourier_Bessel_coeffs_mean, Fourier_Bessel_coeffs_err, r_interpolation_method, start);
+	PbPb.initialize_n_point_evaluations(r_interpolation_method, start);
+
+	PbPb.getOnePointFunction(1, Fourier_Bessel_coeffs_mean, Fourier_Bessel_coeffs_err, start);
 
 	//Fourier_Bessel_coeffs_mean.print();
 

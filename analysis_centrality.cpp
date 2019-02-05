@@ -60,7 +60,10 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	//compute two-point correlation functions for each centrality class
 
 	const gsl_interp_type* r_interpolation_method = gsl_interp_cspline;
-	PbPb.initialize_two_point_evaluations(r_interpolation_method, start);
+	PbPb.initialize_n_point_evaluations(r_interpolation_method, start);
+
+	// print weighting functions W
+	PbPb.print_W("output/weight_functions.txt", 200);
 
 	for (int m = 0; m < 10; ++m)
 	{
@@ -77,7 +80,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 			complex_matrix<number_type> TwoPointFunction(lMax, lMax);
 			complex_matrix<number_type> TwoPointFunction_err(lMax, lMax);
-			PbPb.getTwoPointFunction(m, c, TwoPointFunction, TwoPointFunction_err, r_interpolation_method, start);
+			PbPb.getTwoPointFunction(m, c, TwoPointFunction, TwoPointFunction_err, start);
 
 
 			// save moduli of coeffs in text file 
