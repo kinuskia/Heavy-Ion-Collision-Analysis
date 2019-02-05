@@ -47,9 +47,9 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	PbPb.get_percentiles(classes);
 
 	// Create outfile name
-	std::string outfile = "output/decomposition";
-	outfile += impact_parameter;
-	outfile += ".txt";
+	std::string outfile_modulus = "output/decomposition_modulus";
+	outfile_modulus += impact_parameter;
+	outfile_modulus += ".txt";
 	size_type mMax = 10;
 	size_type lMax = 10;
 	complex_matrix<number_type> Fourier_Bessel_coeffs_mean(mMax+1, lMax);
@@ -74,8 +74,26 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 			gsl_matrix_set(moduli, i, j, sqrt(real*real+imag*imag));
 		}
 	} 
-	to_file(outfile, moduli);
+	to_file(outfile_modulus, moduli);
 	gsl_matrix_free(moduli);
+
+	// save phase of coeffs in text files
+	std::string outfile_phase = "output/decomposition_phase";
+	outfile_phase += impact_parameter;
+	outfile_phase += ".txt";
+	gsl_matrix* phases = gsl_matrix_alloc(Fourier_Bessel_coeffs_mean.rowsize(), Fourier_Bessel_coeffs_mean.colsize());
+	for (size_type i = 0; i < phases->size1; ++i)
+	{
+		for (size_type j = 0; j < phases->size2; ++j)
+		{
+			number_type real = Fourier_Bessel_coeffs_mean.get_real(i, j);
+			number_type imag = Fourier_Bessel_coeffs_mean.get_imag(i, j);
+			number_type phase = atan2(imag, real);
+			gsl_matrix_set(phases, i, j, phase);
+		}
+	}
+	to_file(outfile_phase, phases);
+	gsl_matrix_free(phases);
 
 	PbPb.free();
 
