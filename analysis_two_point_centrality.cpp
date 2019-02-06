@@ -72,10 +72,11 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 			std::cout << "m: " << m << " class: " << classes[c] << "%" << "\n";
 			// Create outfile name
 			std::string centrality_class = std::to_string(int(classes[c-1])) + "-" + std::to_string(int(classes[c]));
-			std::string outfile = "output/two_point_" + centrality_class;
-			outfile += "_m";
-			outfile += std::to_string(m);
-			outfile += ".txt";
+			std::string outfile_modulus = "output/two_point_" + centrality_class;
+			outfile_modulus += "_m";
+			outfile_modulus += std::to_string(m);
+			outfile_modulus += "_modulus";
+			outfile_modulus += ".txt";
 			size_type lMax = 20;
 
 			complex_matrix<number_type> TwoPointFunction(lMax, lMax);
@@ -94,17 +95,34 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 					gsl_matrix_set(moduli, i, j, sqrt(real*real+imag*imag));
 				}
 			} 
-			to_file(outfile, moduli);
+			to_file(outfile_modulus, moduli);
 			gsl_matrix_free(moduli);
+
+			// save phase of coeffs in text file
+			std::string outfile_phase = "output/two_point_" + centrality_class;
+			outfile_phase += "_m";
+			outfile_phase += std::to_string(m);
+			outfile_phase += "_phase";
+			outfile_phase += ".txt";
+			gsl_matrix* phases = gsl_matrix_alloc(TwoPointFunction.rowsize(), TwoPointFunction.colsize());
+			for (size_type i = 0; i < phases->size1; ++i)
+			{
+				for (size_type j = 0; j < phases->size2; ++j)
+				{
+					number_type real = TwoPointFunction.get_real(i, j);
+					number_type imag = TwoPointFunction.get_imag(i, j);
+					gsl_matrix_set(phases, i, j, atan2(imag, real));
+				}
+			} 
+			to_file(outfile_phase, phases);
+			gsl_matrix_free(phases);
+
+			
 
 		}
 	}
 	
 
-	
-
-
-	PbPb.free();
 
 	current_time = std::time(nullptr);
 	std::cout << current_time-start << "s: " << "Output data saved.\n"; 

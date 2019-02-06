@@ -91,6 +91,7 @@ public:
 		for (size_type i = 0; i < profiles_.size(); ++i)
 		{
 			gsl_matrix_free(profiles_[i]);
+			gsl_matrix_free(m_profiles_[i]);
 		}
 	}
 
@@ -230,13 +231,16 @@ public:
 				}
 			}
 			gsl_spline2d_init(splines_[k], x_sites_, y_sites_, z_profiles_[k], grid_size_, grid_size_);
+
+			// free profile
+			gsl_matrix_free(profiles_[k]);
 		}
 
 	}
 
 	// initialize r-interpolation
 	/*
-		The interpolation objects of the m'th mode of the k'th profile ist saved at the index:
+		The interpolation objects of the m'th mode of the k'th profile is saved at the index:
 		index = k*Nm_ + m
 		-> conversion:
 		k = index/Nm_
@@ -269,6 +273,9 @@ public:
 				// initialize spline object
 				gsl_spline_init(r_splines_[index], r_sites_, e_sites, Nr_);
 			}
+
+			// free m_profiles
+			gsl_matrix_free(m_profiles[k]);
 		}
 
 	}
@@ -549,12 +556,13 @@ public:
 
 	}
 
-	// outsource certain evaluations of getTwoPointFunction
+	// outsource certain evaluations of getOnePointFunction and getTwoPointFunction
 	void initialize_n_point_evaluations(const gsl_interp_type* interpolation_method, std::time_t start)
 	{
 		/* Fourier-decompose the profiles */
 		decompose_azimuthal();
 		initialize_r_interpolation(interpolation_method);
+
 
 		std::time_t current_time = std::time(nullptr);
 		std::cout << current_time-start << "s: " << "Profiles have been Fourier-decomposed.\n"; 	
@@ -587,7 +595,7 @@ public:
 
 			complex_matrix<number_type> current_coeff(1, lMax);
 			BesselDecomposeProfile(k, centrality_index, m, current_coeff);
-			// fill current two-point object e_ml1 w_ml2
+			// fill current two-point object e_ml1 e*_ml2
 			complex_matrix<number_type> current_two_point(lMax, lMax);
 			for (size_type l1 = 0; l1 < current_two_point.rowsize(); ++l1)
 			{
@@ -647,7 +655,7 @@ public:
 		}
 	}
 
-	// Bessel-decompose profile k with respect to mode m and save data to current_coeff matrix
+	// Bessel-decompose profile k with respect to mode m and save data to current_coeff matrix of the form 1 x lMax
 	void BesselDecomposeProfile(size_type k, size_type centrality_index, size_type m, complex_matrix<number_type> & current_coeff)
 	{
 		assert(current_coeff.rowsize() == 1);
@@ -668,6 +676,7 @@ public:
 			}
 			current_coeff.set_entry(0, l-1, real, imag);
 		}
+
 	
 	}
 
@@ -706,7 +715,11 @@ public:
 			// save computed profile internally
 			m_profiles_.push_back(profile);
 
-			//gsl_matrix_free(profile);
+			// free xy-interpolation objects
+			gsl_spline2d_free(splines_[k]);
+			gsl_interp_accel_free(xacc_[k]);
+			gsl_interp_accel_free(yacc_[k]);
+
 		}
 
 		/* 
@@ -777,7 +790,7 @@ public:
 		}
 	}
 
-	// print average of Fourier decomposed data, specifically <|E_m(r)|> for given centrality class
+	// compute average of Fourier decomposed data, specifically <|E_m(r)|> for given centrality class
 	void average_fourier(size_type m, size_type centrality_index, gsl_vector* radii, gsl_vector* e_mean, gsl_vector* e_err)
 	{
 		assert(e_mean->size == Nr_);
