@@ -58,11 +58,14 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	compute expectation values <e_0l> for each centrality class (m=0 for non-vanishing values)
 	*/
 
+	const gsl_interp_type* r_interpolation_method = gsl_interp_cspline;
+	PbPb.initialize_n_point_evaluations(r_interpolation_method, start);
+
+	// print weighting functions W
+	PbPb.print_W("output/weight_functions.txt", 200);
+
 	for (int c = 1; c < classes.size(); ++c)
 	{
-		const gsl_interp_type* r_interpolation_method = gsl_interp_cspline;
-		PbPb.initialize_n_point_evaluations(r_interpolation_method, start);
-
 		std::cout << " class: " << classes[c] << "%" << "\n";
 		// Create outfile names
 		std::string centrality_class = std::to_string(int(classes[c-1])) + "-" + std::to_string(int(classes[c]));
@@ -75,7 +78,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 		complex_matrix<number_type> OnePointFunction_err(1, lMax);
 
 		PbPb.getOnePointFunction(c, OnePointFunction, OnePointFunction_err, start);
-
+		
 		// save moduli of coeffs in text file 
 		std::vector<number_type> moduli(lMax);
 		for (size_type i = 0; i < moduli.size(); ++i)
@@ -84,6 +87,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 			number_type imag = OnePointFunction.get_imag(0, i);
 			moduli[i] = sqrt(real*real+imag*imag);	
 		}
+
 		std::vector<std::vector<number_type>> moduli_column(1);
 		moduli_column[0] = moduli; 
 		to_file(outfile_modulus, moduli_column);
@@ -92,7 +96,6 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 		std::string outfile_phase = "output/one_point_" + centrality_class;
 		outfile_phase += "_phase";
 		outfile_phase += ".txt";
-
 		std::vector<number_type> phases(lMax);
 		for (size_type i = 0; i < phases.size(); ++i)
 		{
@@ -101,13 +104,14 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 			phases[i] = atan2(imag, real);	
 		}
 		std::vector<std::vector<number_type>> phases_column(1);
-		phases_column[0] = phases; 
+		phases_column[0] = phases;
+
 		to_file(outfile_phase, phases_column); 
 
 	}
 
 
-	PbPb.free();
+
 
 	current_time = std::time(nullptr);
 	std::cout << current_time-start << "s: " << "Output data saved.\n"; 

@@ -77,7 +77,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 			outfile_modulus += std::to_string(m);
 			outfile_modulus += "_modulus";
 			outfile_modulus += ".txt";
-			size_type lMax = 20;
+			size_type lMax = 10;
 
 			complex_matrix<number_type> TwoPointFunction(lMax, lMax);
 			complex_matrix<number_type> TwoPointFunction_err(lMax, lMax);

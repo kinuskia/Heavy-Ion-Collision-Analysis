@@ -275,7 +275,7 @@ public:
 			}
 
 			// free m_profiles
-			gsl_matrix_free(m_profiles[k]);
+			gsl_matrix_free(m_profiles_[k]);
 		}
 
 	}
@@ -405,21 +405,24 @@ public:
 
 	// evaluate Bessel coefficient c_ml (if one uses J' zeros)
 	number_type c (size_type m, size_type l)
-	{ 
-		if (m == 0 && l == 1)
-		{
-			return 0.5;
-		}
-		else if (m == 0 && l > 1)
-		{
-			number_type zero = Bessel_zero(m, l-1);
-			return gsl_sf_bessel_Jn(m, zero)*gsl_sf_bessel_Jn(m, zero)*(zero*zero - m*m)/2./zero/zero;
-		}
-		else
-		{
-			number_type zero = Bessel_zero(m, l);
-			return gsl_sf_bessel_Jn(m, zero)*gsl_sf_bessel_Jn(m, zero)*(zero*zero - m*m)/2./zero/zero;
-		}
+	{
+		number_type zero = Bessel_zero(m, l);
+		return gsl_sf_bessel_Jn(m, zero)*gsl_sf_bessel_Jn(m, zero)*(zero*zero - m*m)/2./zero/zero; 
+
+		// if (m == 0 && l == 1)
+		// {
+		// 	return 0.5;
+		// }
+		// else if (m == 0 && l > 1)
+		// {
+		// 	number_type zero = Bessel_zero(m, l-1);
+		// 	return gsl_sf_bessel_Jn(m, zero)*gsl_sf_bessel_Jn(m, zero)*(zero*zero - m*m)/2./zero/zero;
+		// }
+		// else
+		// {
+		// 	number_type zero = Bessel_zero(m, l);
+		// 	return gsl_sf_bessel_Jn(m, zero)*gsl_sf_bessel_Jn(m, zero)*(zero*zero - m*m)/2./zero/zero;
+		// }
 		
 	}
 
@@ -753,7 +756,35 @@ public:
 			gsl_interp_accel* acc = gsl_interp_accel_alloc();
 			W_acc_.push_back(acc);
 			gsl_spline_init(W_splines_[c-1], r_sites_, W_sites, Nr_);
-		}	
+		}
+
+		// /*
+		//    Subtract background function from the Fourier-decomposed data
+		// */
+
+		// for (size_type k = 0; k < m_profiles_.size(); ++k)
+		// {
+		// 	// Find out to which centrality class this profile belongs
+		// 	for (size_type c = 1; c < percent_mult_.size(); ++c)
+		// 	{
+		// 		if(is_in_centrality_class(k, c))
+		// 		{
+		// 			// subtract correct background function from m=0 mode
+		// 			for (size_type l = 0; l < m_profiles_[k]->size2; ++l)
+		// 			{
+		// 				number_type current_value = gsl_matrix_get(m_profiles_[k], 0, l);
+		// 				number_type radius = (R_-grid_step_) * l / Nr_;
+		// 				gsl_matrix_set(m_profiles_[k], 0, l, current_value - W(radius, c)/3.1415926 );
+		// 			}
+		// 			break;
+		// 		}
+		// 		else
+		// 		{
+		// 			continue;
+		// 		}
+		// 	}
+
+		// }	
 
 	}
 
@@ -963,26 +994,35 @@ double interpolate_at_m_wrapper(double r, void* params)
 	std::size_t c = params_->centrality_index;
 	size_type Nm = params_->pt_Collision->Nm();
 
-
 	if (m < Nm/2)
 	{
-		if (m == 0 && l == 1)
-		{
-			return (params_->pt_Collision->interpolate_fourier(k, m, r))*r; // times r because of dr measure
-		}
-		else if (m == 0 && l > 1)
-		{
-			return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l-1, r, c));
-		}
-		else
-		{
-			return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l, r, c)); // times r because of dr measure
-		}
+		return ((params_->pt_Collision->interpolate_fourier(k, m, r)) -params_->pt_Collision->W(r,c)/3.1415926 )*r*(params_->pt_Collision->Bessel(m, l, r, c)); // times r because of dr measure
 	}
-	else // m> Nm/2 calls refer to the imaginary part of E_(Nm-m) (r). No case distinction needed because imaginary part = 0 for m=0
+	else // m> Nm/2 calls refer to the imaginary part of E_(Nm-m) (r). 
 	{
-		return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(Nm-m, l, r, c)); // times r because of dr measure
-	}	
+		return ((params_->pt_Collision->interpolate_fourier(k, m, r)) -params_->pt_Collision->W(r,c)/3.1415926 )*r*(params_->pt_Collision->Bessel(Nm-m, l, r, c)); // times r because of dr measure
+	}
+
+
+	// if (m < Nm/2)
+	// {
+	// 	if (m == 0 && l == 1)
+	// 	{
+	// 		return (params_->pt_Collision->interpolate_fourier(k, m, r))*r; // times r because of dr measure
+	// 	}
+	// 	else if (m == 0 && l > 1)
+	// 	{
+	// 		return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l-1, r, c));
+	// 	}
+	// 	else
+	// 	{
+	// 		return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(m, l, r, c)); // times r because of dr measure
+	// 	}
+	// }
+	// else // m> Nm/2 calls refer to the imaginary part of E_(Nm-m) (r). No case distinction needed because imaginary part = 0 for m=0
+	// {
+	// 	return (params_->pt_Collision->interpolate_fourier(k, m, r))*r*(params_->pt_Collision->Bessel(Nm-m, l, r, c)); // times r because of dr measure
+	// }	
 	
 }
 
