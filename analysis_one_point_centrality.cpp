@@ -28,17 +28,10 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	PbPb.centralize(); // shift data so that barycentre at origin
 
-	// set interpolation method: gsl_interp2d_bicubic or gsl_interp2d_bilinear
-	const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
-	PbPb.initialize_xy_interpolation(xy_interpolation_method); // initialize objects needed for interpolation
-
-	std::time_t current_time = std::time(nullptr);
-	std::cout << current_time-start << "s: " << "Data has been read in and normalized.\n"; 
+	PbPb.getReactionPlane("output/angles.txt"); // compute reaction plane angles
 
 
-
-
-	// compute the respective multiplicity limits for specific centrality classes
+	// define the respective multiplicity limits for specific centrality classes
 	std::vector<number_type> classes(12);
 	classes[0] = 0;
 	classes[1] = 5;
@@ -54,6 +47,18 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	classes[11] = 100;
 	PbPb.get_percentiles(classes);
 
+	std::time_t current_time = std::time(nullptr);
+	std::cout << current_time-start << "s: " << "Data has been read in and normalized.\n"; 
+
+	// print ensemble averaged profiles
+	PbPb.print_averaged_profiles("output/profiles_averaged");
+
+
+	// set interpolation method: gsl_interp2d_bicubic or gsl_interp2d_bilinear
+	const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
+	PbPb.initialize_xy_interpolation(xy_interpolation_method); // initialize objects needed for interpolation
+
+
 	/*
 	compute expectation values <e_0l> for each centrality class (m=0 for non-vanishing values)
 	*/
@@ -64,6 +69,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	// print weighting functions W
 	PbPb.print_W("output/weight_functions.txt", 200);
 
+	
+
 	for (int c = 1; c < classes.size(); ++c)
 	{
 		std::cout << " class: " << classes[c] << "%" << "\n";
@@ -73,40 +80,42 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 		outfile_modulus += "_modulus";
 		outfile_modulus += ".txt";
 		size_type lMax = 10;
+		size_type mMax = 5;
 
-		complex_matrix<number_type> OnePointFunction(1, lMax);
-		complex_matrix<number_type> OnePointFunction_err(1, lMax);
+		complex_matrix<number_type> OnePointFunction(mMax+1, lMax);
+		complex_matrix<number_type> OnePointFunction_err(mMax+1, lMax);
 
 		PbPb.getOnePointFunction(c, OnePointFunction, OnePointFunction_err, start);
 		
-		// save moduli of coeffs in text file 
-		std::vector<number_type> moduli(lMax);
-		for (size_type i = 0; i < moduli.size(); ++i)
+		// save moduli of coeffs in text file
+		gsl_matrix* moduli = gsl_matrix_alloc(mMax+1, lMax); 
+		for (size_type i = 0; i < moduli->size1; ++i)
 		{
-			number_type real = OnePointFunction.get_real(0, i);
-			number_type imag = OnePointFunction.get_imag(0, i);
-			moduli[i] = sqrt(real*real+imag*imag);	
+			for (size_type j = 0; j < moduli->size2; ++j)
+			{
+				number_type real = OnePointFunction.get_real(i, j);
+				number_type imag = OnePointFunction.get_imag(i, j);
+				gsl_matrix_set(moduli, i, j, sqrt(real*real+imag*imag));	
+			}
 		}
-
-		std::vector<std::vector<number_type>> moduli_column(1);
-		moduli_column[0] = moduli; 
-		to_file(outfile_modulus, moduli_column);
+ 
+		to_file(outfile_modulus, moduli);
 
 		// save phase of coeffs in text file
 		std::string outfile_phase = "output/one_point_" + centrality_class;
 		outfile_phase += "_phase";
 		outfile_phase += ".txt";
-		std::vector<number_type> phases(lMax);
-		for (size_type i = 0; i < phases.size(); ++i)
-		{
-			number_type real = OnePointFunction.get_real(0, i);
-			number_type imag = OnePointFunction.get_imag(0, i);
-			phases[i] = atan2(imag, real);	
-		}
-		std::vector<std::vector<number_type>> phases_column(1);
-		phases_column[0] = phases;
+		gsl_matrix* phases = gsl_matrix_alloc(mMax+1, lMax);
+		for (size_type i = 0; i < phases->size1; ++i)
+			for(size_type j = 0; j < phases->size2; ++j)
+			{
+				number_type real = OnePointFunction.get_real(i, j);
+				number_type imag = OnePointFunction.get_imag(i, j);
+				gsl_matrix_set(phases, i, j, atan2(imag, real));	
+			}
 
-		to_file(outfile_phase, phases_column); 
+
+		to_file(outfile_phase, phases); 
 
 	}
 

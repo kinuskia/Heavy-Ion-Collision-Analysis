@@ -5,19 +5,19 @@
 #include "../auxiliary/to_file.hpp"
 #include "glauber_auxiliary.hpp"
 
-int main ()
+int main (int argc, char* argv[]) // input: x, filename
 {
-	// Nucleus parameters
-	double R = 6.38;
-	double a = 0.535;
+	// Nucleus parameters Pb
+	double R = 6.62;
+	double a = 0.546;
 	double w = 0.;
 	double rho0 = get_rho0(R, a, w);
 	
 	// collision parameters
-	double x = 1.0; //  x= 0: wounded nucleon model
+	double x = std::stod(argv[1])/100.; //  x= 0: wounded nucleon model
 	double mult_nn = 1; // average nucleon-nucleon multiplicity
-	int N = 197; // collision nucleon number
-	double sigma_nn_inel = 4.; // inelastic nucleon-nucleon cross section in fm^2
+	int N = 207; // collision nucleon number
+	double sigma_nn_inel = 6.4; // inelastic nucleon-nucleon cross section in fm^2
 
 	int N_values = 30;
 	double b_max = 20;
@@ -33,8 +33,10 @@ int main ()
 	data[0] = b;
 	data[1] = mult;
 
-	to_file("mult-b_x100.txt", data);
-
+	//to_file("mult-b_x100.txt", data);
+	std::string filename = argv[2]; 
+	filename += ".txt";
+	to_file(filename, data);
 
 
 

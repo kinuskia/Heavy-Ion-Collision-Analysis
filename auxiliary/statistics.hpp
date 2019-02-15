@@ -172,4 +172,20 @@ void mean (const std::vector<complex_matrix<number_type>> & data, complex_matrix
 
 }
 
+// signum function: returns +1 or -1 (input type is used as output)
+template<typename number_type>
+number_type sign(number_type value)
+{
+	number_type sign_value;
+	if (value >= 0)
+	{
+		sign_value = number_type(1.0);
+	}
+	else
+	{
+		sign_value = number_type(-1.0);
+	}
+	return sign_value;
+}
+
 #endif

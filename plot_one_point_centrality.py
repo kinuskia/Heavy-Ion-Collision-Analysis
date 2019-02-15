@@ -2,23 +2,64 @@ import matplotlib.pyplot as plt
 import numpy as np 
 
 
+
+#modes = [0, 1, 2, 3, 4, 5]
+#modes = [0, 1]
 percentiles = [0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 counter_fig = 0
+
+# modulus plots
 
 for p in range(1, len(percentiles)):
 	counter_fig = counter_fig + 1
 	plt.figure(counter_fig)
-	source_modulus = 'output/one_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p]) + '_modulus' +'.txt'
-	eps_0l = np.loadtxt(source_modulus)
-	l = np.arange(len(eps_0l))+1
-	plt.scatter(l, eps_0l)
-	plt.xlabel("$l$")
-	plt.ylabel("$\\left\\|\\left\\langle\\epsilon_{" + str(0) + ",l}\\right\\rangle\\right\\|$")
+	source = 'output/one_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p])  + '_modulus' +'.txt'
+	profile = np.loadtxt(source)
+	plt.imshow(profile, interpolation=None, cmap=plt.cm.Blues)
+	plt.xlabel("$l-1$")
+	plt.ylabel("$m$")
 	centrality_class = "centrality class " + str(percentiles[p-1]) + '-' + str(percentiles[p]) + '%'
 	plt.title("$\\left\\|\\left\\langle\\epsilon_{" + str(0) + ",l}\\right\\rangle\\right\\|$, "+centrality_class)
-	filename = "plots/one_point_modules_" + str(percentiles[p-1]) + "-" + str(percentiles[p])+ ".pdf"
+	plt.colorbar()
+	filename = "plots/one_point_modules_" + str(percentiles[p-1]) + "-" + str(percentiles[p]) + ".pdf"
 	plt.savefig(filename, format='pdf', bbox_inches = "tight")
 	plt.close()
+
+#phase plots
+
+for p in range(1, len(percentiles)):
+	counter_fig = counter_fig + 1
+	plt.figure(counter_fig)
+	source = 'output/one_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p]) +  '_phase' +'.txt'
+	profile = np.loadtxt(source)
+	plt.imshow(np.abs(profile), interpolation=None, cmap=plt.cm.Blues)
+	plt.xlabel("$l-1$")
+	plt.ylabel("$m$")
+	centrality_class = "centrality class " + str(percentiles[p-1]) + '-' + str(percentiles[p]) + '%'
+	plt.title("Phase of $\\left\\langle\\epsilon_{" + str(0) + ",l}\\right\\rangle$, "+centrality_class)
+	plt.colorbar()
+	filename = "plots/one_point_phase_" + str(percentiles[p-1]) + "-" + str(percentiles[p]) + ".pdf"
+	plt.savefig(filename, format='pdf', bbox_inches = "tight")
+	plt.close()
+
+
+# percentiles = [0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+# counter_fig = 0
+
+# for p in range(1, len(percentiles)):
+# 	counter_fig = counter_fig + 1
+# 	plt.figure(counter_fig)
+# 	source_modulus = 'output/one_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p]) + '_modulus' +'.txt'
+# 	eps_0l = np.loadtxt(source_modulus)
+# 	l = np.arange(len(eps_0l))+1
+# 	plt.scatter(l, eps_0l)
+# 	plt.xlabel("$l$")
+# 	plt.ylabel("$\\left\\|\\left\\langle\\epsilon_{" + str(0) + ",l}\\right\\rangle\\right\\|$")
+# 	centrality_class = "centrality class " + str(percentiles[p-1]) + '-' + str(percentiles[p]) + '%'
+# 	plt.title("$\\left\\|\\left\\langle\\epsilon_{" + str(0) + ",l}\\right\\rangle\\right\\|$, "+centrality_class)
+# 	filename = "plots/one_point_modules_" + str(percentiles[p-1]) + "-" + str(percentiles[p])+ ".pdf"
+# 	plt.savefig(filename, format='pdf', bbox_inches = "tight")
+# 	plt.close()
 
 # plt.figure(1)
 # source = 'output/two_point_' + str(per)

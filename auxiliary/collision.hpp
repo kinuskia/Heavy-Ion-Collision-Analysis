@@ -46,6 +46,8 @@ public:
 	, grid_step_(grid_step)
 	, grid_size_(size_type(2.*grid_max/grid_step))
 	, profiles_(0)
+	, angles_(0)
+	, consider_reaction_plane_(false)
 	, m_profiles_(0)
 	, z_profiles_(0)
 	, impact_parameters_(0)
@@ -349,6 +351,81 @@ public:
 			}
 			gsl_matrix_free(m_copy);
 		}
+	}
+
+
+	// get reaction plane angle
+	void getReactionPlane(std::string filename)
+	{
+		consider_reaction_plane_ = true;
+
+		for (size_type k = 0; k < profiles_.size(); ++k)
+		{
+			// compute entries of inertia tensor
+			number_type Qxx = 0;
+			number_type Qxy = 0;
+			number_type Qyy = 0;
+
+
+			for (size_type i = 0; i < profiles_[k]->size1; ++i)
+			{
+				for (size_type j = 0; j < profiles_[k]->size2; ++j)
+				{
+					number_type x = x_from_index(j);
+					number_type y = y_from_index(i);
+					Qxx += gsl_matrix_get(profiles_[k], i, j)*(y*y);
+					Qxy += gsl_matrix_get(profiles_[k], i, j)*(-x*y);
+					Qyy += gsl_matrix_get(profiles_[k], i, j)*(x*x);
+				}
+			}
+			Qxx *= grid_step_*grid_step_*grid_step_;
+			Qxy *= grid_step_*grid_step_*grid_step_;
+			Qyy *= grid_step_*grid_step_*grid_step_;
+
+
+			// compute angle by which the profile needs to be rotated clockwise
+			number_type val = (Qyy-Qxx)/2./Qxy;
+			number_type angle = atan(val + sqrt(1+val*val)*sign(Qxy));
+
+			angles_.push_back(angle);
+		}
+		std::vector<std::vector<number_type>> angle_column(1);
+		angle_column[0] = angles_;
+		to_file(filename, angle_column);
+	}
+
+	// print ensemble averaged profiles
+	void print_averaged_profiles(std::string filename)
+	{
+		for (size_type c = 1; c < percentiles_.size(); ++c) // loop over centrality classes
+		{
+			gsl_matrix* sum = gsl_matrix_alloc(profiles_[0]->size1, profiles_[0]->size2);
+			gsl_matrix_scale(sum, 0.0);
+			size_type counter = 0;
+			for (size_type k = 0; k < profiles_.size(); ++k)
+			{
+				if (is_in_centrality_class(k, c))
+				{
+					// add profile data to sum
+					gsl_matrix_add(sum, profiles_[k]);
+					counter++;
+				}
+				else
+				{
+					continue;
+				}
+			}
+			// divide by the number of elements to obtain average
+			gsl_matrix_scale(sum, number_type(1./counter));
+
+			// save ensemble average in text file
+			std::string outfilename = filename;
+			outfilename += "_" + std::to_string(size_type(percentiles_[c-1])) + "-" + std::to_string(size_type(percentiles_[c]));
+			outfilename += ".txt";
+			to_file(outfilename, sum);
+			gsl_matrix_free(sum);
+		}
+
 	}
 
 	// Functions to convert index pair (i,j) to cartesian coordinates (x,y)
@@ -887,6 +964,9 @@ private:
 	// vector of energy density profiles
 	std::vector<gsl_matrix*> profiles_;
 
+	// vector of reaction plane angles
+	std::vector<number_type> angles_;
+
 	// vector of Fourier-decomposed (m, r)-profiles
 	std::vector<gsl_matrix*> m_profiles_;
 
@@ -927,6 +1007,8 @@ private:
 
 	// Miscellaneous
 	gsl_matrix* bessel_deriv_zeros_;
+	bool consider_reaction_plane_; // if true, then reaction plane angle 
+									// is to be taken into account when accessing profiles
 
 
 
