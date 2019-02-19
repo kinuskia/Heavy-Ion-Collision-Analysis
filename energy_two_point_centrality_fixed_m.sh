@@ -17,6 +17,6 @@ rm -rf PbPb.txt
 	
 # Evaluate centrality of Trento files with name Trento/PbPb.dat, 
 
-./TwoPointCentrality $DESTINATION .dat $NEVENTS
+./TwoPointCentrality_fixed_m $DESTINATION .dat $NEVENTS
 
 

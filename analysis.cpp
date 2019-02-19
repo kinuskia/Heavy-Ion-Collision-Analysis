@@ -30,6 +30,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	const gsl_interp2d_type* interpolation_method = gsl_interp2d_bicubic;
 	PbPb.initialize_xy_interpolation(interpolation_method); // initialize objects needed for interpolation
 
+	
 
 	// compute phi-averaged energy density profile and save to text file
 	gsl_vector* radii = gsl_vector_alloc(500); // compute energy density for 500 radii between 0 and grid_max-1fm

@@ -9,8 +9,6 @@ NEVENTS=10000
 DESTINATION=‎⁨Trento/PbPb$NEVENTS
 ./trento_generator $NEVENTS 0 20 $DESTINATION PbPb.txt
 
-
-
 # Launch Trento
 /Users/Kianusch/.local/bin/trento -c PbPb.txt
 
@@ -19,6 +17,6 @@ rm -rf PbPb.txt
 	
 # Evaluate centrality of Trento files with name Trento/PbPb.dat, 
 
-./OnePointCentrality $DESTINATION .dat $NEVENTS
+./TwoPointCentrality_fixed_l $DESTINATION .dat $NEVENTS
 
 

@@ -31,6 +31,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	PbPb.getReactionPlane("output/angles.txt"); // compute reaction plane angles
 
 
+
+
 	// define the respective multiplicity limits for specific centrality classes
 	std::vector<number_type> classes(12);
 	classes[0] = 0;
@@ -58,16 +60,46 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
 	PbPb.initialize_xy_interpolation(xy_interpolation_method); // initialize objects needed for interpolation
 
+	
 
 	/*
 	compute expectation values <e_0l> for each centrality class (m=0 for non-vanishing values)
 	*/
 
 	const gsl_interp_type* r_interpolation_method = gsl_interp_cspline;
-	PbPb.initialize_n_point_evaluations(r_interpolation_method, start);
+	//PbPb.initialize_n_point_evaluations(r_interpolation_method, start);
+	/* Fourier-decompose the profiles */
+	PbPb.decompose_azimuthal();
+
+	// print <e_m(r)> for all centrality classes
+	for (size_type m = 0; m < 5; ++m)
+	{
+		for (size_type c = 1; c < classes.size(); ++c)
+		{
+			std::string filename_mean = "output/e_m_mean_m";
+			filename_mean += std::to_string(m);
+			filename_mean += "_";
+			std::string centrality_class = std::to_string(int(classes[c-1])) + "-" + std::to_string(int(classes[c]));
+			filename_mean += centrality_class;
+			filename_mean += ".txt";
+			std::cout << "m: " << m << " c: " << c << "\n";
+			PbPb.print_e_m(filename_mean, m, c);
+		}
+	}
+
+	PbPb.initialize_r_interpolation(r_interpolation_method);
 
 	// print weighting functions W
 	PbPb.print_W("output/weight_functions.txt", 200);
+
+
+
+	// print maps rho
+	PbPb.print_rho("output/rhos.txt", 200);
+
+	//std::cout << PbPb.integ_test() << "\n";
+
+
 
 	
 
@@ -77,7 +109,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 		// Create outfile names
 		std::string centrality_class = std::to_string(int(classes[c-1])) + "-" + std::to_string(int(classes[c]));
 		std::string outfile_modulus = "output/one_point_" + centrality_class;
-		outfile_modulus += "_modulus";
+		//outfile_modulus += "_modulus";
 		outfile_modulus += ".txt";
 		size_type lMax = 10;
 		size_type mMax = 5;
@@ -87,37 +119,55 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 		PbPb.getOnePointFunction(c, OnePointFunction, OnePointFunction_err, start);
 		
-		// save moduli of coeffs in text file
-		gsl_matrix* moduli = gsl_matrix_alloc(mMax+1, lMax); 
-		for (size_type i = 0; i < moduli->size1; ++i)
+		// save real parts of coeffs in text file
+		gsl_matrix* result = gsl_matrix_alloc(mMax+1, lMax); 
+		for (size_type i = 0; i < result->size1; ++i)
 		{
-			for (size_type j = 0; j < moduli->size2; ++j)
+			for (size_type j = 0; j < result->size2; ++j)
 			{
 				number_type real = OnePointFunction.get_real(i, j);
-				number_type imag = OnePointFunction.get_imag(i, j);
-				gsl_matrix_set(moduli, i, j, sqrt(real*real+imag*imag));	
+				//number_type imag = OnePointFunction.get_imag(i, j);
+				gsl_matrix_set(result, i, j, real);	
 			}
 		}
  
-		to_file(outfile_modulus, moduli);
+		to_file(outfile_modulus, result);
 
-		// save phase of coeffs in text file
+		// save error of coeffs in text file
 		std::string outfile_phase = "output/one_point_" + centrality_class;
-		outfile_phase += "_phase";
+		outfile_phase += "_error";
 		outfile_phase += ".txt";
-		gsl_matrix* phases = gsl_matrix_alloc(mMax+1, lMax);
-		for (size_type i = 0; i < phases->size1; ++i)
-			for(size_type j = 0; j < phases->size2; ++j)
+		gsl_matrix* result_error = gsl_matrix_alloc(mMax+1, lMax);
+		for (size_type i = 0; i < result_error->size1; ++i)
+			for(size_type j = 0; j < result_error->size2; ++j)
 			{
-				number_type real = OnePointFunction.get_real(i, j);
-				number_type imag = OnePointFunction.get_imag(i, j);
-				gsl_matrix_set(phases, i, j, atan2(imag, real));	
+				number_type real = OnePointFunction_err.get_real(i, j);
+				//number_type imag = OnePointFunction.get_imag(i, j);
+				gsl_matrix_set(result_error, i, j, real);	
 			}
 
 
-		to_file(outfile_phase, phases); 
+		to_file(outfile_phase, result_error); 
 
 	}
+
+	// Compute clm values
+	size_type lMax = 20; 
+	size_type mMax = 10;
+	PbPb.get_Bessel_deriv_zeros(mMax+1, lMax+1);
+	gsl_matrix* clm = gsl_matrix_alloc(lMax, mMax +1);
+	for (size_type l = 1; l<= lMax ; ++l)
+	{
+		for (size_type m = 0; m <= mMax; ++m)
+		{
+			gsl_matrix_set(clm, l-1, m, PbPb.c(m, l));
+		}
+	}
+	to_file("output/clm.txt", clm);
+
+	PbPb.print_Bessel_deriv_zeros(10, 5, "output/bessel_d_0.txt");
+
+
 
 
 

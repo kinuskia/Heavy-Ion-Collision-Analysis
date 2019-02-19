@@ -44,3 +44,14 @@ plt.legend(loc = "best")
 plt.savefig("plots/W_centrality_log.pdf", format="pdf", bbox_inches="tight")
 
 
+
+# Check if integral equals 1/2
+p = [p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11]
+for liste in p:
+	integral = 0
+	dr = r[1]-r[0]
+	for i in range(0, len(liste)):
+		integral += r[i]*liste[i]*dr
+	print(integral)
+
+
