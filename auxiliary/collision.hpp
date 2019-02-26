@@ -597,7 +597,7 @@ public:
 		std::cout << current_time-start << "s: " << "Profiles have been Bessel-decomposed.\n"; 
 
 		// Compute ensemble mean of Fourier-Bessel coefficients
-	
+		mean(Fourier_Bessel_coeffs, coeffs_mean, coeffs_err);
 
 		// CAREFUL: commented lines no longer work (is now centrality class specific)!!
 

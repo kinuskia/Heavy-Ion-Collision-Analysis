@@ -5,11 +5,14 @@ import numpy as np
 # plt.imshow(profile, interpolation='none', cmap=plt.cm.Blues)
 # plt.savefig("profile002.pdf", format='pdf', bbox_inches = "tight")
 
-percentiles = [0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+percentiles = [0, 5, 10, 20, 30, 40]
 
 for i in range(0, len(percentiles)-1):
 	filename = "output/profiles_averaged_" + str(percentiles[i]) + "-" + str(percentiles[i+1])
 	plt.figure(i)
+	plt.xticks(np.arange(0, 100, step=20))
+	plt.figure(figsize=(10,8))
+	plt.rcParams.update({'font.size': 23})
 	profile = np.loadtxt(filename + ".txt")
 	plt.imshow(profile, interpolation='none', cmap=plt.cm.Blues)
 	plt.title("Profile " + str(percentiles[i]) + "-" + str(percentiles[i+1]) + "%")

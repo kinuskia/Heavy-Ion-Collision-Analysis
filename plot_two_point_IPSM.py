@@ -13,7 +13,8 @@ trento_gauge = 1
 for mode in modes:
 	counter_fig = counter_fig + 1
 	plt.figure(counter_fig)
-	plt.rcParams.update({'font.size': 15})
+	plt.figure(figsize=(10,7.3))
+	plt.rcParams.update({'font.size': 23})
 	from matplotlib.ticker import MaxNLocator
 	ax = plt.figure().gca()
 	ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -23,7 +24,7 @@ for mode in modes:
 	for i in range(0, lMax):
 		l[i] = i+1
 		y[i] = clm[0, 0]/clm[i, mode]
-	plt.scatter(l, y, label="IPSM", s=30)
+	plt.scatter(l, y, label="IPSM", s=40, color = "orangered", marker= "+")
 	plt.xlabel("l")
 	plt.ylabel("$\\left\\|G_l^{(" + str(mode)  + ")}/G_1^{("+str(0)+")}\\right\\|$")
 	plt.title("m = " +str(mode))
@@ -39,8 +40,8 @@ for mode in modes:
 	for i in range(0, lMax):
 		y_trento[i] = abs(trento[i,i]/trento_gauge)
 		y_trento_error[i] =abs(trento_error[i,i])/trento_gauge
-	plt.scatter(l, y_trento, s=10, color = "green")
-	plt.errorbar(l, y_trento, yerr = y_trento_error, linestyle = "none", capsize = 6, color="green", label="TRENTo")
+	plt.scatter(l, y_trento, s=40, color = "green", label="TRENTo", marker= "x")
+	#plt.errorbar(l, y_trento, yerr = y_trento_error, linestyle = "none", elinewidth=2, capsize = 6, capthick = 2, color="green")
 	plt.legend(loc='best')
 	filename = "plots/two_point_modules_IPSM"  + "_m" + str(mode) + ".pdf"
 	plt.savefig(filename, format='pdf', bbox_inches = "tight")

@@ -68,7 +68,9 @@ f100 = interp1d(b100, mult100, kind='cubic')
 
 
 plt.figure(1)
-plt.scatter(b_Trento, mult_trento/mult_trento[0]/1.45);
+plt.figure(figsize=(10,5))
+plt.rcParams.update({'font.size': 15})
+plt.scatter(b_Trento, mult_trento/mult_trento[0]/3.1, s = 5);
 plt.plot(b, f00(b)/f00(b[0]), label="x=0.00")
 #plt.plot(b, f01(b)/f01(b[0]), label="x=0.01")
 plt.plot(b, f02(b)/f02(b[0]), label="x=0.02")

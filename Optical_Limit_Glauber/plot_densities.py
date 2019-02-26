@@ -19,14 +19,16 @@ fCu = interp1d(rCu, rhoCu, kind='cubic')
 
 
 plt.figure(1)
-plt.plot(rnew, 4*np.pi*rnew*rnew*fPb(rnew), label = 'Pb-208')
-plt.plot(rnew, 4*np.pi*rnew*rnew*fAu(rnew), label = 'Au-197')
-plt.plot(rnew, 4*np.pi*rnew*rnew*fCu(rnew), label = 'Cu-63')
+plt.figure(figsize=(10,5))
+plt.rcParams.update({'font.size': 15})
+plt.plot(rnew, fPb(rnew)/fPb(rnew[0]), label = '$^{208}$Pb ($R=6.624\\,$fm, $a=0.549\\,$fm)')
+plt.plot(rnew, fAu(rnew)/fAu(rnew[0]), label = '$^{197}$Au\\ ($R=6.38\\,$fm, $a=0.535\\,$fm)')
+plt.plot(rnew, fCu(rnew)/fCu(rnew[0]), label = '$^{63}$Cu\\ ($R=4.2\\,$fm, $a=0.596\\,$fm)')
 plt.legend(loc = 'best')
-plt.title("Nucleon density profiles")
+plt.title("Nucleus density profiles")
 
 plt.xlabel("r [fm]")
-plt.ylabel("$4\\pi r^2\\rho$")
+plt.ylabel("$\\rho/\\rho_0$")
 #plt.legend(loc = "best")
 plt.savefig("density_profile.pdf", format="pdf", bbox_inches="tight")
 

@@ -11,7 +11,9 @@ counter_fig = 0
 for p in range(1, len(percentiles)):
 	counter_fig = counter_fig + 1
 	plt.figure(counter_fig)
-	plt.rcParams.update({'font.size': 15})
+	plt.figure(figsize=(10,7.3))
+	plt.rcParams.update({'font.size': 23})
+	plt.rcParams['axes.titlepad'] = 10
 	source_result = 'output/one_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p])  +'.txt'
 	profile = np.loadtxt(source_result)
 	source_error = 'output/one_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p]) + '_error' +'.txt'
@@ -22,8 +24,8 @@ for p in range(1, len(percentiles)):
 	for i in range(0, lMax):
 		l[i] = i+1
 	for m in range(0, mMax+1):
-		plt.errorbar(l, profile[m, 0:], yerr=profile_error[m,0:], linestyle = 'none', capsize = 4, label = "$m="+str(m)+"$")
-		plt.scatter(l, profile[m, 0:], s=5)
+		plt.errorbar(l, profile[m, 0:], yerr=profile_error[m,0:], linestyle = 'none', elinewidth=2, capsize = 6, capthick = 2, label = "$m="+str(m)+"$")
+		plt.scatter(l, profile[m, 0:], s=10)
 	plt.xlabel("$l$")
 	plt.ylabel("$\\left\\langle\\epsilon_l^{(m)}\\right\\rangle$")
 	plt.legend(loc='best')
@@ -32,6 +34,8 @@ for p in range(1, len(percentiles)):
 	filename = "plots/one_point_" + str(percentiles[p-1]) + "-" + str(percentiles[p]) + ".pdf"
 	plt.savefig(filename, format='pdf', bbox_inches = "tight")
 	plt.close()
+
+
 
 # modulus plots
 
