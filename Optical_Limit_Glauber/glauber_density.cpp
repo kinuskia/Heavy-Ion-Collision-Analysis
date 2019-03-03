@@ -12,23 +12,27 @@ int main ()
 	double a = 0.596;
 	double w = 0.;
 	double rho0 = get_rho0(R, a, w);
+	double N = 208;
+
+	// inelastic cross section
+	double sigma_nn_inel = 6.4;
 	
 
 	int N_values = 30;
-	double r_max = 12;
-	std::vector<double> r(N_values);
-	std::vector<double> density(N_values);
+	double b_max = 22;
+	std::vector<double> b(N_values);
+	std::vector<double> d_sigma_d_b(N_values);
 
 	for (int i = 0; i < N_values; ++i)
 	{
-		r[i] = r_max * i / N_values;
-		density[i] = rho(r[i], rho0, R, a, w);
+		b[i] = b_max * i / N_values;
+		d_sigma_d_b[i] = sigma_AB(b[i], N, sigma_nn_inel, rho0, R, a, w);
 	}
 	std::vector<std::vector<double>> data(2);
-	data[0] = r;
-	data[1] = density;
+	data[0] = b;
+	data[1] = d_sigma_d_b;
 
-	to_file("Cu_density.txt", data);
+	to_file("d_sigma_d_b.txt", data);
 
 
 

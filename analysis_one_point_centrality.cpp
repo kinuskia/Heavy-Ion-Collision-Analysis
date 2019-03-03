@@ -23,7 +23,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	PbPb.read_in(filename, fileformat, n_files); // read in Trento event files
 
-	PbPb.normalize(1); // normalize events so that integral = 1
+	//PbPb.normalize(1); // normalize events so that integral = 1
 
 
 	PbPb.centralize(); // shift data so that barycentre at origin
@@ -46,9 +46,9 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	std::time_t current_time = std::time(nullptr);
 	std::cout << current_time-start << "s: " << "Data has been read in and normalized.\n"; 
 
+
 	// print ensemble averaged profiles
 	PbPb.print_averaged_profiles("output/profiles_averaged");
-
 
 	// set interpolation method: gsl_interp2d_bicubic or gsl_interp2d_bilinear
 	const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
@@ -64,6 +64,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	//PbPb.initialize_n_point_evaluations(r_interpolation_method, start);
 	/* Fourier-decompose the profiles */
 	PbPb.decompose_azimuthal();
+	PbPb.getNormalizations();
 
 	// print <e_m(r)> for all centrality classes
 	for (size_type m = 0; m < 5; ++m)
@@ -80,6 +81,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 			PbPb.print_e_m(filename_mean, m, c);
 		}
 	}
+	
 
 	PbPb.initialize_r_interpolation(r_interpolation_method);
 
@@ -93,9 +95,23 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	//std::cout << PbPb.integ_test() << "\n";
 
+	// compute expectation value of background coefficient
+	std::vector<number_type> eps_00(0);
+	std::vector<number_type> eps_00_err(0);
+	for (int c = 1; c < classes.size(); ++c)
+	{
+		std::cout << " class: " << classes[c] << "%" << "\n";
+		number_type coeff_mean;
+		number_type coeff_err;
+		PbPb.getOnePointFunction_00(c, coeff_mean, coeff_err, start);
+		eps_00.push_back(coeff_mean);
+		eps_00_err.push_back(coeff_err);
+	}
+	std::vector<std::vector<number_type>> eps_00_data(2);
+	eps_00_data[0] = eps_00;
+	eps_00_data[1] = eps_00_err;
+	to_file("output/background_coeffs.txt", eps_00_data);
 
-
-	
 
 	for (int c = 1; c < classes.size(); ++c)
 	{

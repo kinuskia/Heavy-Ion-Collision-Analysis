@@ -46,6 +46,34 @@ for mode in modes:
 		plt.savefig(filename, format='pdf', bbox_inches = "tight")
 		plt.close(counter_fig)
 
+# connected diagrams
+for mode in modes:
+	for p in range(1, len(percentiles)):
+		counter_fig = counter_fig + 1
+		plt.figure(counter_fig)
+		plt.figure(figsize=(10,10))
+		plt.rcParams.update({'font.size': 23})
+		plt.rcParams['axes.titlepad'] = 20
+		source = 'output/two_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p]) + '_m' + str(mode) + '_real' +'.txt'
+		profile = np.loadtxt(source)
+		# import one-point functions
+		source_one = 'output/one_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p])  +'.txt'
+		profile_one_ml = np.loadtxt(source_one)
+		# subtract unconnected parts from correlation function
+		for i in range(0, len(profile[0:, 0])):
+			for j in range(0, len(profile[0, 0:])):
+				profile[i, j] -= profile_one_ml[mode, i]*profile_one_ml[mode, j] 
+		maximal_value = max(np.amax(profile), -np.amin(profile))
+		plt.imshow(profile, interpolation=None, cmap=plt.cm.RdYlGn,vmin = -maximal_value, vmax = maximal_value, extent = (-0.5+1, len(profile[0,:])-0.5+1, len(profile[:,0])-0.5+1, -0.5+1))
+		plt.xlabel("$l_2$")
+		plt.ylabel("$l_1$")
+		centrality_class =  str(percentiles[p-1]) + '-' + str(percentiles[p]) + '%'
+		plt.title("$\\left\\langle\\epsilon^{(" + str(mode) + ")}_{l_1} \\epsilon^{(" + str(-mode) + ")}_{l_2}\\right\\rangle-\\left\\langle\\epsilon^{(" + str(mode) + ")}_{l_1} \\right\\rangle\\left\\langle\\epsilon^{(" + str(mode) + ")}_{l_2} \\right\\rangle$, "+centrality_class)
+		plt.colorbar()
+		filename = "plots/two_point_real_connected_" + str(percentiles[p-1]) + "-" + str(percentiles[p]) + "_m" + str(mode) + ".pdf"
+		plt.savefig(filename, format='pdf', bbox_inches = "tight")
+		plt.close(counter_fig)
+
 # plt.figure(1)
 # source = 'output/two_point_' + str(per)
 # profile = np.loadtxt('output/two_point_0-5_m0.txt')

@@ -46,6 +46,43 @@ for mode in modes:
 		plt.savefig(filename, format='pdf', bbox_inches = "tight")
 		plt.close(counter_fig)
 
+# connected diagrams
+for mode in modes:
+	for p in range(1, len(percentiles)):
+		counter_fig = counter_fig + 1
+		plt.figure(counter_fig)
+		plt.figure(figsize=(10,6))
+		plt.rcParams.update({'font.size': 23})
+		plt.rcParams['axes.titlepad'] = 15
+		source = 'output/two_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p]) + '_l' + str(mode) + '_modulus' +'.txt'
+		profile = np.loadtxt(source)
+		source_phase = 'output/two_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p]) + '_l' + str(mode) + '_phase' +'.txt'
+		profile_phase = np.loadtxt(source_phase)
+		source_one_ml = 'output/one_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p])  +'.txt'
+		profile_one_ml = np.loadtxt(source_one_ml)
+		#subtract unconnected parts from profile
+		profile *= np.cos(profile_phase)
+		for i in range(0, len(profile[0:, 0])):
+			for j in range(0, len(profile[0, 0:])):
+				m1 = int(i)
+				mMax = (len(profile[0, 0:])-1)/2
+				m2 = int(j - mMax)
+				if (m2 < 0):
+					profile[i, j] -= profile_one_ml[m1, mode]*profile_one_ml[-m2, mode]*np.power(-1., m2)
+				else:
+					profile[i, j] -= profile_one_ml[m1, mode]*profile_one_ml[m2, mode]
+
+		maximal_value = max(np.amax(profile), -np.amin(profile))
+		plt.imshow(profile, interpolation=None, cmap=plt.cm.RdYlGn, vmin = -maximal_value, vmax = maximal_value, extent = (-0.5-(len(profile[0,:])-1)/2, len(profile[0,:])-0.5-(len(profile[0,:])-1)/2, len(profile[:,0])-0.5, -0.5))
+		plt.xlabel("$m_2$")
+		plt.ylabel("$m_1$")
+		centrality_class =  str(percentiles[p-1]) + '-' + str(percentiles[p]) + '%'
+		plt.title("$\\left\\langle\\epsilon^{(m_1)}_{"+str(mode)+"} \\epsilon^{(m_2)}_{"+str(mode)+"}\\right\\rangle - \\left\\langle\\epsilon^{(m_1)}_{"+str(mode)+"}\\right\\rangle \\left\\langle\\epsilon^{(m_2)}_{"+str(mode)+"}\\right\\rangle$, "+centrality_class)
+		plt.colorbar()
+		filename = "plots/two_point_real_connected_" + str(percentiles[p-1]) + "-" + str(percentiles[p]) + "_l" + str(mode) + ".pdf"
+		plt.savefig(filename, format='pdf', bbox_inches = "tight")
+		plt.close(counter_fig)
+
 # plt.figure(1)
 # source = 'output/two_point_' + str(per)
 # profile = np.loadtxt('output/two_point_0-5_m0.txt')

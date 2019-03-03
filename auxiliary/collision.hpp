@@ -67,6 +67,7 @@ public:
 	, W_interpolators_(0)
 	, W_splines_(0)
 	, W_acc_(0)
+	, normalizations_(0)
 	{
 		// initialize grid sites
 		x_sites_ = new number_type[grid_size_];
@@ -178,6 +179,7 @@ public:
 		size_type N = multiplicities_.size();
 		for (size_type i = 0; i< percentiles.size(); ++i)
 		{
+			normalizations_.push_back(1.);
 			percentiles_.push_back(percentiles[i]);
 			size_type dn = (N-1)*(100-percentiles[i])/100;
 			std::nth_element(multip_copy.begin(), multip_copy.begin()+dn, multip_copy.end());
@@ -304,10 +306,30 @@ public:
 				}
 			}
 			sum *= grid_step_*grid_step_;
+
+			std::cout << sum << "\n";
 			
 			// rescale
 			gsl_matrix_scale(profiles_[k], energy/sum);
 		}
+	}
+
+	// Integrate profile k
+	number_type integrated_density(size_type k)
+	{
+		// compute total energy
+		number_type sum = 0;
+		for (size_type i = 0; i < profiles_[k]->size1; ++i)
+		{
+			for (size_type j = 0; j < profiles_[k]->size2; ++j)
+			{
+				sum += gsl_matrix_get(profiles_[k], i, j);
+			}
+		}
+		sum *= grid_step_*grid_step_;
+
+		return sum;
+		
 	}
 
 	// centralize matrix data (barycenter at N/2,N/2)
@@ -318,14 +340,15 @@ public:
 			// compute barycentre
 			number_type x_bary = 0;
 			number_type y_bary = 0;
+			number_type integral = integrated_density(k);
 			for (size_type i = 0; i < profiles_[k]->size1; ++i)
 			{
 				for (size_type j = 0; j < profiles_[k]->size2; ++j)
 				{
 					number_type x = j;
 					number_type y = i;
-					x_bary += gsl_matrix_get(profiles_[k], i, j)*x;
-					y_bary += gsl_matrix_get(profiles_[k], i, j)*y;
+					x_bary += gsl_matrix_get(profiles_[k], i, j)*x/integral;
+					y_bary += gsl_matrix_get(profiles_[k], i, j)*y/integral;
 				}
 			}
 			x_bary *= grid_step_*grid_step_;
@@ -357,6 +380,33 @@ public:
 				}
 			}
 			gsl_matrix_free(m_copy);
+		}
+	}
+
+	// Get normalization constants for each centrality class
+	void getNormalizations()
+	{
+		for (size_type c = 1; c < percentiles_.size(); ++c)
+		{
+			std::cout << normalizations_[c-1] << "\n";
+			normalizations_[c-1] = (2.*integ_r_Wr(c, 0, R_-grid_step_));
+			std::cout << normalizations_[c-1] << "\n";
+		}
+
+		// normalize m_profiles
+		for (size_type c = 1; c < percentiles_.size(); ++c)
+		{
+			for (size_type k = 0; k < m_profiles_.size(); ++k)
+			{
+				// Skip profile if not in centrality class
+				if (!is_in_centrality_class(k, c))
+				{
+					continue;
+				}
+
+				gsl_matrix_scale(m_profiles_[k], 1./normalizations_[c-1]);
+
+			}
 		}
 	}
 
@@ -456,6 +506,11 @@ public:
 	number_type integ_fourier_r(size_type k, size_type centrality_index, size_type m, size_type l, number_type r_lower, number_type r_upper);
 	
 
+	// integrate W(r) r epsilon(r, phi) over r for given profile
+	number_type integ_r(size_type k, number_type r_lower, number_type r_upper);
+
+	// integrate W(r) r over r for given centrality index
+	number_type integ_r_Wr(size_type centrality_index, number_type r_lower, number_type r_upper);
 
 	// interpolation of profil k
 	number_type interpolate(size_type k, number_type x, number_type y) 
@@ -473,7 +528,7 @@ public:
 	// interpolate weight function
 	number_type W(number_type r, size_type centrality_index)
 	{
-		return gsl_spline_eval(W_splines_[centrality_index-1], r, W_acc_[centrality_index-1]);
+		return gsl_spline_eval(W_splines_[centrality_index-1], r, W_acc_[centrality_index-1])/normalizations_[centrality_index-1];
 	}
 
 	// Evaluate appropriate Bessel function
@@ -560,6 +615,30 @@ public:
 
 			gsl_vector_free(e_ensemble);
 		}
+	}
+
+	// Compute ensemble-averaged expectation value of background coefficient
+	void getOnePointFunction_00(size_type centrality_index, number_type & coeff_mean, number_type & coeff_err, std::time_t start)
+	{
+
+		std::vector<number_type> coeffs(0);
+
+		for (size_type k = 0; k < profiles_.size(); ++k)
+		{
+			// Skip profile if not in centrality class
+			if (!is_in_centrality_class(k, centrality_index))
+			{
+				continue;
+			}
+			number_type current_coeff;
+			current_coeff = getBackgroundCoefficient(k);
+			coeffs.push_back(current_coeff);
+		}
+
+		mean(coeffs, coeff_mean, coeff_err);
+
+		std::time_t current_time = std::time(nullptr);
+		std::cout << current_time-start << "s: " << "Backgound one-mode-fluctuation has been computed.\n";
 	}
 
 	// Compute one-point correlation function (=expectation value e_ml) for given centrality class
@@ -652,6 +731,7 @@ public:
 	{
 		/* Fourier-decompose the profiles */
 		decompose_azimuthal();
+		getNormalizations();
 		initialize_r_interpolation(interpolation_method);
 
 
@@ -794,6 +874,80 @@ public:
 
 	}
 
+	// Method to compute a two-point correlation function of the form <e_00 eml> (e_00 being the background coefficient)
+	void getTwoPointFunction_background(size_type centrality_index, complex_matrix<number_type> & TwoPointFunction, complex_matrix<number_type> & TwoPointFunction_err, std::time_t start)
+	{
+		std::time_t current_time = std::time(nullptr);
+
+		/* Bessel-decompose profile parts with quantum number m */
+		size_type mMax = (TwoPointFunction.rowsize()-1)/2; // TwoPoint contains m=-mMax...0...mMax
+		size_type lMax = TwoPointFunction.colsize();
+
+
+
+		// compute necessary bessel zeros
+		get_Bessel_deriv_zeros(mMax+1, lMax);
+
+		// compute two-point object e_00 e_ml for each profile in the centrality class
+
+		std::vector<complex_matrix<number_type>> Two_point_objects(0);
+
+		for (size_type k = 0; k < profiles_.size(); ++k)
+		{
+			// Skip profile if not in centrality class
+			if (!is_in_centrality_class(k, centrality_index))
+			{
+				continue;
+			}
+
+
+			complex_matrix<number_type> current_coeff(mMax+1, lMax);
+			BesselDecomposeProfile(k, centrality_index, current_coeff);
+			number_type current_background = getBackgroundCoefficient(k);
+			// fill current two-point object e_ml1 e*_ml2
+			complex_matrix<number_type> current_two_point(2*mMax+1, lMax);
+			for (size_type m = 0; m <= mMax; ++m)
+			{
+				for (size_type l = 0; l < lMax; ++l)
+				{
+					// Case m >= 0
+					number_type eml_pos_real = current_coeff.get_real(m, l);
+					number_type eml_pos_imag = current_coeff.get_imag(m, l);
+					
+					number_type result_pos_real = current_background*eml_pos_real;
+					number_type result_pos_imag = current_background*eml_pos_imag;
+
+					current_two_point.set_entry(m+mMax, l, result_pos_real, result_pos_imag);
+
+					// case m < 0
+					number_type eml_neg_real = current_coeff.get_real(m, l);
+					number_type eml_neg_imag = current_coeff.get_imag(m, l)*(-1.0);
+					if (m%2 == 1)
+					{
+						eml_neg_real *= -1.0;
+						eml_neg_imag *= -1.0;
+					}
+					
+					number_type result_neg_real = current_background*eml_neg_real;
+					number_type result_neg_imag = current_background*eml_neg_imag;
+
+					current_two_point.set_entry(mMax-m, l, result_neg_real, result_neg_imag);
+
+				}
+			}
+			
+			Two_point_objects.push_back(current_two_point);
+		}
+
+		current_time = std::time(nullptr);
+		std::cout << current_time-start << "s: " << "Background two-point objects have been computed.\n"; 
+
+		// Compute ensemble mean of Fourier-Bessel coefficients
+		mean(Two_point_objects, TwoPointFunction, TwoPointFunction_err);
+
+
+	}
+
 	// Bessel-decompose profile k and save data to current_coeff matrix
 	void BesselDecomposeProfile(size_type k, size_type centrality_index, complex_matrix<number_type> & current_coeff)
 	{
@@ -818,6 +972,8 @@ public:
 			}
 		}
 	}
+
+
 
 	// Bessel-decompose profile k with respect to mode m and save data to current_coeff matrix of the form 1 x lMax
 	void BesselDecomposeProfile_fixed_m(size_type k, size_type centrality_index, size_type m, complex_matrix<number_type> & current_coeff)
@@ -867,6 +1023,12 @@ public:
 		}
 
 	
+	}
+
+	// get coefficient e_00 for profile k
+	number_type getBackgroundCoefficient(size_type k)
+	{
+		return -1. + integ_r(k, 0, R_-grid_step_);
 	}
 
 	/* Do a FFT decomposition of energy density profiles with respect to phi
@@ -944,33 +1106,33 @@ public:
 			gsl_spline_init(W_splines_[c-1], r_sites_, W_sites, Nr_);
 		}
 
-		/*
-		   Subtract background function from the Fourier-decomposed data
-		*/
+		// /*
+		//    Subtract background function from the Fourier-decomposed data
+		// */
 
-		for (size_type k = 0; k < m_profiles_.size(); ++k)
-		{
-			// Find out to which centrality class this profile belongs
-			for (size_type c = 1; c < percent_mult_.size(); ++c)
-			{
-				if(is_in_centrality_class(k, c))
-				{
-					// subtract correct background function from m=0 mode (actually not necessary since adding multiples of W(r) leaves coefficients invariant)
-					for (size_type l = 0; l < m_profiles_[k]->size2; ++l)
-					{
-						number_type current_value = gsl_matrix_get(m_profiles_[k], 0, l);
-						number_type radius = 1.0*(R_) * l / (Nr_+1);
-						gsl_matrix_set(m_profiles_[k], 0, l, current_value - 0.0*W(radius, c)/3.1415926 );
-					}
-					break;
-				}
-				else
-				{
-					continue;
-				}
-			}
+		// for (size_type k = 0; k < m_profiles_.size(); ++k)
+		// {
+		// 	// Find out to which centrality class this profile belongs
+		// 	for (size_type c = 1; c < percent_mult_.size(); ++c)
+		// 	{
+		// 		if(is_in_centrality_class(k, c))
+		// 		{
+		// 			// subtract correct background function from m=0 mode (actually not necessary since adding multiples of W(r) leaves coefficients invariant)
+		// 			for (size_type l = 0; l < m_profiles_[k]->size2; ++l)
+		// 			{
+		// 				number_type current_value = gsl_matrix_get(m_profiles_[k], 0, l);
+		// 				number_type radius = 1.0*(R_) * l / (Nr_+1);
+		// 				gsl_matrix_set(m_profiles_[k], 0, l, current_value - 0.0*W(radius, c)/3.1415926 );
+		// 			}
+		// 			break;
+		// 		}
+		// 		else
+		// 		{
+		// 			continue;
+		// 		}
+		// 	}
 
-		}
+		// }
 
 		// // Sanity check: compute <e_0> again to see if it vanishes
 
@@ -987,6 +1149,8 @@ public:
 		
 
 	}
+
+
 
 	
 
@@ -1172,6 +1336,7 @@ private:
 	std::vector<const gsl_interp_type*> W_interpolators_;
 	std::vector<gsl_spline*> W_splines_;
 	std::vector<gsl_interp_accel*> W_acc_;
+	std::vector<number_type> normalizations_;
 
 	// Miscellaneous
 	gsl_matrix* bessel_deriv_zeros_;
@@ -1208,6 +1373,9 @@ double interpolate_at_r_wrapper(double phi, void* params)
 template<class number_type>
 number_type Collision<number_type>::integ_phi(std::size_t k, number_type r, number_type phi_lower, number_type phi_upper)
 {
+
+	//std::cout << "integ_phi\n";
+
 	typedef std::size_t size_type;
 	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
 	number_type integral;
@@ -1290,6 +1458,9 @@ double interpolate_at_m_wrapper(double r, void* params)
 template<class number_type>
 number_type Collision<number_type>::integ_fourier_r(size_type k, size_type centrality_index, size_type m, size_type l, number_type r_lower, number_type r_upper)
 {
+
+	//std::cout << "integ_fourier_r\n";
+
 	typedef std::size_t size_type;
 	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
 	number_type integral;
@@ -1305,8 +1476,71 @@ number_type Collision<number_type>::integ_fourier_r(size_type k, size_type centr
 	return integral;
 }
 
+
+// integrate dr r  dphi epsilon(r, phi)
+
+// gsl function to call to integrate over the mth Fourier mode of the energy density with respect to r at fixed m
+double interpolate_r_wrapper(double r, void* params)
+{
+	interpolate_at_m_params<std::size_t, double>* params_ = (interpolate_at_m_params<std::size_t, double>*) params;
+	std::size_t k = params_->profile_index;
+
+	return ((params_->pt_Collision->interpolate_fourier(k, 0, r)) )*r*2.*3.1415926; 
+}
+template<class number_type>
+number_type Collision<number_type>::integ_r(size_type k, number_type r_lower, number_type r_upper)
+{
+
+	//std::cout << "integ_r\n";
+
+	typedef std::size_t size_type;
+	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
+	number_type integral;
+	number_type error;
+	interpolate_at_m_params<size_type, number_type> params = {k, 0, 1, 1, this};
+
+	gsl_function F;
+	F.function = &interpolate_r_wrapper;
+	F.params = &params;
+	gsl_integration_qags(&F, r_lower, r_upper, 1e-5, 1e-5, 1000, w, &integral, &error);
+	//std::cout << " Integral: " << integral << " Error abs: " << error << " Error rel: " << error/integral << "\n"; 
+	gsl_integration_workspace_free(w);
+	return integral;
+}
+
+// integrate dr r  W(r)
+
+// gsl function to call to integrate over the mth Fourier mode of the energy density with respect to r at fixed m
+double interpolate_r_Wr_wrapper(double r, void* params)
+{
+	interpolate_at_m_params<std::size_t, double>* params_ = (interpolate_at_m_params<std::size_t, double>*) params;
+	std::size_t c = params_->centrality_index;
+
+	return (params_->pt_Collision->W(r, c)) *r; 
+}
+template<class number_type>
+number_type Collision<number_type>::integ_r_Wr(size_type centrality_index, number_type r_lower, number_type r_upper)
+{
+
+	//std::cout << "integ_r_Wr\n";
+
+	typedef std::size_t size_type;
+	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
+	number_type integral;
+	number_type error;
+	interpolate_at_m_params<size_type, number_type> params = {0, 0, 1, centrality_index, this};
+
+	gsl_function F;
+	F.function = &interpolate_r_Wr_wrapper;
+	F.params = &params;
+	gsl_integration_qags(&F, r_lower, r_upper, 1e-5, 1e-5, 1000, w, &integral, &error);
+	//std::cout << " Radius: " << r << " Index: " << k <<  " Integral: " << integral << " Error abs: " << error << " Error rel: " << error/integral << "\n"; 
+	gsl_integration_workspace_free(w);
+	return integral;
+}
+
 // struct to feed Collision object to rho(r) function
-template<typename size_type ,typename number_type>
+template<typename size_type, typename number_type>
 struct interpolate_W_params
 {
 	Collision<number_type>* pt_Collision;
@@ -1325,6 +1559,9 @@ double interpolate_W_wrapper(double r, void* params)
 template<class number_type>
 number_type Collision<number_type>::rho(number_type r, size_type centrality_index)
 {
+
+	//std::cout << "integ_rho\n";
+
 	typedef std::size_t size_type;
 	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
 	number_type integral;
@@ -1365,6 +1602,9 @@ double test_wrapper(double r, void* params)
 template<class number_type>
 number_type Collision<number_type>::integ_test()
 {
+
+	//std::cout << "integ_test\n";
+
 	typedef std::size_t size_type;
 	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
 	number_type integral;

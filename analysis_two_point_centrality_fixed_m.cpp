@@ -23,7 +23,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	PbPb.read_in(filename, fileformat, n_files, true); // read in Trento event files
 
-	PbPb.normalize(1); // normalize events so that integral = 1
+	//PbPb.normalize(1); // normalize events so that integral = 1
 
 
 	PbPb.centralize(); // shift data so that barycentre at origin
@@ -65,7 +65,62 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	// print weighting functions W
 	PbPb.print_W("output/weight_functions.txt", 200);
 
-	number_type max_rel_error = -1.0;
+
+	// compute two-point correlation functions that include background term <e00 eml>
+	number_type max_rel_error = -1.0; // variable to keep track of current relative error
+	std::cout << "Computing background correlations.\n";
+	for (int c = 1; c < classes.size(); ++c)
+	{
+		// Create filename
+		std::string outfile_background = "output/two_point_background_";
+		outfile_background += std::to_string(int(classes[c-1])) + "-" + std::to_string(int(classes[c]));
+		outfile_background += "_real";
+		std::string outfile_background_err = outfile_background;
+		outfile_background_err += "_error.txt";
+		outfile_background += ".txt";
+
+		number_type mMax = 4;
+		number_type lMax = 9;
+
+		complex_matrix<number_type> TwoPointFunction(2*mMax+1, lMax);
+		complex_matrix<number_type> TwoPointFunction_err(2*mMax+1, lMax);
+		PbPb.getTwoPointFunction_background(c, TwoPointFunction, TwoPointFunction_err, start);
+
+		// save to output
+		gsl_matrix* result = gsl_matrix_alloc(TwoPointFunction.rowsize(), TwoPointFunction.colsize());
+		gsl_matrix* result_err = gsl_matrix_alloc(TwoPointFunction.rowsize(), TwoPointFunction.colsize());
+		gsl_matrix* result_err_rel = gsl_matrix_alloc(TwoPointFunction.rowsize(), TwoPointFunction.colsize());
+
+		for (size_type i = 0; i < result->size1; ++i)
+			{
+				for (size_type j = 0; j < result->size2; ++j)
+				{
+					number_type real = TwoPointFunction.get_real(i, j);
+					number_type imag = TwoPointFunction.get_imag(i, j);
+					//gsl_matrix_set(moduli, i, j, sqrt(real*real+imag*imag));
+					gsl_matrix_set(result, i, j, real);
+					gsl_matrix_set(result_err, i, j, TwoPointFunction_err.get_real(i, j));
+					gsl_matrix_set(result_err_rel, i, j, TwoPointFunction_err.get_real(i, j)/sqrt(real*real+imag*imag));
+				}
+			}
+			std::cout << "Maximal absolute error: " << gsl_matrix_max(result_err) << "\n"; 
+			number_type maximal_modulus = std::max(gsl_matrix_max(result), -gsl_matrix_min(result));
+			number_type current_max_rel_error = gsl_matrix_max(result_err)/maximal_modulus;
+			std::cout << "In relation to maximal value: " << current_max_rel_error << "\n"; 
+			if (current_max_rel_error > max_rel_error)
+			{
+				max_rel_error = current_max_rel_error;
+			}
+			to_file(outfile_background, result);
+			to_file(outfile_background_err, result_err);
+			gsl_matrix_free(result);
+			gsl_matrix_free(result_err);
+			gsl_matrix_free(result_err_rel);
+	}
+
+	std::cout << "Maximal relative error found: " << max_rel_error << "\n";
+
+	max_rel_error = -1.0;
 
 	for (int m = 0; m < 5; ++m)
 	{
