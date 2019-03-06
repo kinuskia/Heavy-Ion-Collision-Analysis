@@ -18,6 +18,7 @@
 #include "complex_matrix.hpp"
 #include "bessel_deriv_zero.hpp"
 #include <fstream>
+#include <random>
 
 
 // Functions to transform polar coordinates to cartesian coordinates
@@ -46,8 +47,8 @@ public:
 	, grid_step_(grid_step)
 	, grid_size_(size_type(2.*grid_max/grid_step))
 	, profiles_(0)
+	, random_reaction_plane_(false)
 	, angles_(0)
-	, consider_reaction_plane_(false)
 	, m_profiles_(0)
 	, z_profiles_(0)
 	, impact_parameters_(0)
@@ -140,6 +141,11 @@ public:
 	// read in data files
 	void read_in(std::string filename_begin, std::string fileformat, size_type n_files, bool import_profiles = true)
 	{
+		// initialize random devices to sample random reaction plane angles
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_real_distribution<> dis(0, 2*3.1415926);
+
 		for (size_type k = 0; k < n_files; ++k)
 		{
 			std::string filename = get_filename(filename_begin, fileformat, k, n_files);
@@ -160,6 +166,13 @@ public:
 			impact_parameters_.push_back(impact_param);
 			n_participants_.push_back(n_part);
 			multiplicities_.push_back(mult);
+
+			if (random_reaction_plane_)
+			{
+				number_type angle;
+				angle = dis(gen);
+				angles_.push_back(angle);
+			}
 		}
 	}
 
@@ -185,6 +198,18 @@ public:
 			std::nth_element(multip_copy.begin(), multip_copy.begin()+dn, multip_copy.end());
 			percent_mult_.push_back(multip_copy[dn]);
 			std::cout << percentiles_[i] << " " << percent_mult_[i] << "\n";
+		}
+	}
+
+	void random_reaction_plane(bool yes)
+	{
+		if (yes)
+		{
+			random_reaction_plane_ = true;
+		}
+		else
+		{
+			random_reaction_plane_ = false;
 		}
 	}
 
@@ -414,7 +439,7 @@ public:
 	// get reaction plane angle
 	void getReactionPlane(std::string filename)
 	{
-		consider_reaction_plane_ = true;
+		std::vector<number_type> angles(0);
 
 		for (size_type k = 0; k < profiles_.size(); ++k)
 		{
@@ -444,10 +469,10 @@ public:
 			number_type val = (Qyy-Qxx)/2./Qxy;
 			number_type angle = atan(val + sqrt(1+val*val)*sign(Qxy));
 
-			angles_.push_back(angle);
+			angles.push_back(angle);
 		}
 		std::vector<std::vector<number_type>> angle_column(1);
-		angle_column[0] = angles_;
+		angle_column[0] = angles;
 		to_file(filename, angle_column);
 	}
 
@@ -515,6 +540,17 @@ public:
 	// interpolation of profil k
 	number_type interpolate(size_type k, number_type x, number_type y) 
 	{
+		// consider random reaction plane angle
+		if (random_reaction_plane_)
+		{
+			number_type x1;
+			number_type y1;
+			number_type angle = angles_[k];
+			x1 = x*cos(angle) + y*sin(angle);
+			y1 = (-1.)*x*sin(angle) + y*cos(angle);
+			x = x1;
+			y = y1;
+		}
 		return gsl_spline2d_eval(splines_[k], x, y, xacc_[k], yacc_[k]);
 	}
 
@@ -1296,8 +1332,10 @@ private:
 	// vector of energy density profiles
 	std::vector<gsl_matrix*> profiles_;
 
-	// vector of reaction plane angles
+	// Random reaction plane
+	bool random_reaction_plane_;
 	std::vector<number_type> angles_;
+
 
 	// vector of Fourier-decomposed (m, r)-profiles
 	std::vector<gsl_matrix*> m_profiles_;
@@ -1340,8 +1378,7 @@ private:
 
 	// Miscellaneous
 	gsl_matrix* bessel_deriv_zeros_;
-	bool consider_reaction_plane_; // if true, then reaction plane angle 
-									// is to be taken into account when accessing profiles
+
 
 
 
