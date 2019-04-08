@@ -27,10 +27,10 @@ for p in range(1, len(percentiles)):
 		plt.errorbar(l, profile[m, 0:], yerr=profile_error[m,0:], linestyle = 'none', elinewidth=2, capsize = 6, capthick = 2, label = "$m="+str(m)+"$")
 		plt.scatter(l, profile[m, 0:], s=10)
 	plt.xlabel("$l$")
-	plt.ylabel("$\\left\\langle\\epsilon_l^{(m)}\\right\\rangle$")
+	plt.ylabel("$\\bar{\\epsilon}_l^{(m)}$")
 	plt.legend(loc='best')
 	centrality_class = str(percentiles[p-1]) + '-' + str(percentiles[p]) + '%'
-	plt.title("$\\left\\langle\\epsilon_l^{(m)}\\right\\rangle$, "+centrality_class)
+	plt.title("$\\bar{\\epsilon}_l^{(m)}$, "+centrality_class)
 	filename = "plots/one_point_" + str(percentiles[p-1]) + "-" + str(percentiles[p]) + ".pdf"
 	plt.savefig(filename, format='pdf', bbox_inches = "tight")
 	plt.close()

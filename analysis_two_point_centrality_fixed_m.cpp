@@ -21,6 +21,9 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	// Read in and pre-process Trento data
 	Collision<number_type> PbPb(10, .2); // Create Collision object
 
+	// Randomize reaction plane angle
+	PbPb.random_reaction_plane(false);
+
 	PbPb.read_in(filename, fileformat, n_files, true); // read in Trento event files
 
 	//PbPb.normalize(1); // normalize events so that integral = 1

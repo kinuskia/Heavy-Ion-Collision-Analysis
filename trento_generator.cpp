@@ -19,8 +19,8 @@ void generate_trento_script(std::string n_events, std::string impact_parameter_m
 		//outfile << "output = /Volumes/MAC/Trento/PbPb";
 		outfile << "\n";
 
-		outfile << "reduced-thickness = 0" << "\n";
-		outfile << "fluctuation = 1" << "\n";
+		outfile << "reduced-thickness = 1" << "\n";
+		outfile << "fluctuation = 0.8" << "\n";
 		outfile << "nucleon-width = 0.5" << "\n";
 		outfile << "nucleon-min-dist = 0" << "\n";
 		outfile << "cross-section = 6.4" << "\n";
