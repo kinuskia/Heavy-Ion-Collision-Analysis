@@ -95,71 +95,23 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	//std::cout << PbPb.integ_test() << "\n";
 
-	// compute expectation value of background coefficient
-	std::vector<number_type> eps_00(0);
-	std::vector<number_type> eps_00_err(0);
-	for (int c = 1; c < classes.size(); ++c)
-	{
-		std::cout << " class: " << classes[c] << "%" << "\n";
-		number_type coeff_mean;
-		number_type coeff_err;
-		PbPb.getOnePointFunction_00(c, coeff_mean, coeff_err, start);
-		eps_00.push_back(coeff_mean);
-		eps_00_err.push_back(coeff_err);
-	}
-	std::vector<std::vector<number_type>> eps_00_data(2);
-	eps_00_data[0] = eps_00;
-	eps_00_data[1] = eps_00_err;
-	to_file("output/background_coeffs.txt", eps_00_data);
 
-
-	for (int c = 1; c < classes.size(); ++c)
+	// Print file with the following columns: impact parameter, number of participants, multiplicity
+	PbPb.collision_specs_to_file("output/collision_specs.txt");
+	
+	// Print collision specs file for each centrality class
+	
+	for (size_type c = 1; c < classes.size(); ++c)
 	{
-		std::cout << " class: " << classes[c] << "%" << "\n";
-		// Create outfile names
+		std::string filename = "output/collision_specs_";
 		std::string centrality_class = std::to_string(int(classes[c-1])) + "-" + std::to_string(int(classes[c]));
-		std::string outfile_modulus = "output/one_point_" + centrality_class;
-		//outfile_modulus += "_modulus";
-		outfile_modulus += ".txt";
-		size_type lMax = 10;
-		size_type mMax = 5;
+		filename += centrality_class;
+		filename += ".txt";
 
-		complex_matrix<number_type> OnePointFunction(mMax+1, lMax);
-		complex_matrix<number_type> OnePointFunction_err(mMax+1, lMax);
-
-		PbPb.getOnePointFunction(c, OnePointFunction, OnePointFunction_err, start);
-		
-		// save real parts of coeffs in text file
-		gsl_matrix* result = gsl_matrix_alloc(mMax+1, lMax); 
-		for (size_type i = 0; i < result->size1; ++i)
-		{
-			for (size_type j = 0; j < result->size2; ++j)
-			{
-				number_type real = OnePointFunction.get_real(i, j);
-				//number_type imag = OnePointFunction.get_imag(i, j);
-				gsl_matrix_set(result, i, j, real);	
-			}
-		}
- 
-		to_file(outfile_modulus, result);
-
-		// save error of coeffs in text file
-		std::string outfile_phase = "output/one_point_" + centrality_class;
-		outfile_phase += "_error";
-		outfile_phase += ".txt";
-		gsl_matrix* result_error = gsl_matrix_alloc(mMax+1, lMax);
-		for (size_type i = 0; i < result_error->size1; ++i)
-			for(size_type j = 0; j < result_error->size2; ++j)
-			{
-				number_type real = OnePointFunction_err.get_real(i, j);
-				//number_type imag = OnePointFunction.get_imag(i, j);
-				gsl_matrix_set(result_error, i, j, real);	
-			}
-
-
-		to_file(outfile_phase, result_error); 
-
+		PbPb.collision_specs_to_file(filename, c);
 	}
+
+
 
 	// Compute clm values
 	size_type lMax = 20; 

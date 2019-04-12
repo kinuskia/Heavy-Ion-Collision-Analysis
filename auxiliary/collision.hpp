@@ -176,6 +176,8 @@ public:
 		}
 	}
 
+	// Save header data of trento files in a separate text file
+
 	void collision_specs_to_file(std::string filename) const
 	{
 		std::vector<std::vector<number_type>> columns(3);
@@ -184,6 +186,133 @@ public:
 		columns[2] = multiplicities_;
 		to_file(filename, columns);
 	}
+
+	// Overload for specific centrality class
+	// Save header data of trento files in a separate text file
+
+	void collision_specs_to_file(std::string filename, size_type centrality_index ) const
+	{
+		assert(centrality_index > 0 && centrality_index < percentiles_.size());
+		std::vector<std::vector<number_type>> columns(3);
+		// columns[0] : impact_parameters
+		// columns[1] : n_participants
+		// columns[2] : multiplicities
+		for (size_type k = 0; k < impact_parameters_.size(); ++k)
+		{
+			if (is_in_centrality_class(k, centrality_index))
+			{
+				columns[0].push_back(impact_parameters_[k]);
+				columns[1].push_back(n_participants_[k]);
+				columns[2].push_back(multiplicities_[k]);
+			}
+			else
+			{
+				continue;
+			}
+		}
+
+
+		to_file(filename, columns);
+	}
+
+	// compute histogram data points of multiplicity samples
+	void histogram_mult(std::string filename, size_type N_bins, bool normed)
+	{
+		// create edges and bin vector
+		std::vector<std::size_t> frequencies(N_bins, 0);
+		std::vector<number_type> samples = multiplicities_;
+		number_type min = *std::min_element(samples.begin(), samples.end());
+		number_type max = *std::max_element(samples.begin(), samples.end());
+
+		std::vector<number_type> edges(N_bins+1);
+		for (size_type i = 0; i < edges.size(); ++i)
+		{
+			edges[i] = min + (max-min)/N_bins*i;
+		}
+
+		// compute histogram
+		histogram(samples, edges, frequencies);
+
+		number_type integral = 0;
+		for (size_type i = 0; i < N_bins; ++i)
+		{
+			number_type width = edges[i+1]-edges[i];
+			integral += frequencies[i]*width;
+		}
+
+		if (!normed)
+		{
+			integral = 1.0;
+		}
+
+		// save to text file
+		std::vector<number_type> x(N_bins);
+		std::vector<number_type> y(N_bins);
+		std::vector<number_type> dy(N_bins);
+		for (size_type i = 0; i < x.size(); ++i)
+		{
+			x[i] = (edges[i+1]+edges[i])/2;
+			y[i] = number_type(frequencies[i])/integral;
+			dy[i] = sqrt(number_type(frequencies[i]))/integral;
+		}
+
+		std::vector<std::vector<number_type>> columns(3);
+		columns[0] = x;
+		columns[1] = y;
+		columns[2] = dy;
+
+		to_file(filename, columns);
+	}
+
+	// compute histogram data points of impact parameters
+	void histogram_b(std::string filename, size_type N_bins, bool normed)
+	{
+		// create edges and bin vector
+		std::vector<std::size_t> frequencies(N_bins, 0);
+		std::vector<number_type> samples = impact_parameters_;
+		number_type min = *std::min_element(samples.begin(), samples.end());
+		number_type max = *std::max_element(samples.begin(), samples.end());
+
+		std::vector<number_type> edges(N_bins+1);
+		for (size_type i = 0; i < edges.size(); ++i)
+		{
+			edges[i] = min + (max-min)/N_bins*i;
+		}
+
+		// compute histogram
+		histogram(samples, edges, frequencies);
+
+		number_type integral = 0;
+		for (size_type i = 0; i < N_bins; ++i)
+		{
+			number_type width = edges[i+1]-edges[i];
+			integral += frequencies[i]*width;
+		}
+
+		if (!normed)
+		{
+			integral = 1.0;
+		}
+
+		// save to text file
+		std::vector<number_type> x(N_bins);
+		std::vector<number_type> y(N_bins);
+		std::vector<number_type> dy(N_bins);
+		for (size_type i = 0; i < x.size(); ++i)
+		{
+			x[i] = (edges[i+1]+edges[i])/2;
+			y[i] = number_type(frequencies[i])/integral;
+			dy[i] = sqrt(number_type(frequencies[i]))/integral;
+		}
+
+		std::vector<std::vector<number_type>> columns(3);
+		columns[0] = x;
+		columns[1] = y;
+		columns[2] = dy;
+
+		to_file(filename, columns);
+	}
+
 
 	// compute certain multiplicity percentiles
 	void get_percentiles(const std::vector<number_type> & percentiles)
@@ -1207,6 +1336,49 @@ public:
 		to_file(filename, Ws);
 	}
 
+	// generate output file with values of W(r) for each centrality class
+	void print_W(std::string filename_begin)
+	{
+		// Ws structure: radius, W (sorted by central. class)
+		std::vector<gsl_vector*> Ws(percentiles_.size());
+		// dWs structure: radius, dW (sorted by central. class)
+		std::vector<gsl_vector*> dWs(percentiles_.size());
+
+		for (size_type c = 1; c < percentiles_.size(); ++c) // loop over centrality classes
+		{
+			// Compute <e_0>
+			gsl_vector* radii = gsl_vector_alloc(Nr_);
+			gsl_vector* e_mean = gsl_vector_alloc(Nr_);
+			gsl_vector* e_err = gsl_vector_alloc(Nr_);
+
+			average_fourier(0, c, radii, e_mean, e_err);
+
+
+			// Scale them to get W(r)
+			gsl_vector_scale(e_mean, 3.1415926);
+			gsl_vector_scale(e_err, 3.1415926);
+
+
+			// Save the at the correct position of Ws
+			if (c == 1)
+			{
+				Ws[0] = radii;
+				dWs[0] = radii;
+			}
+
+
+			Ws[c] = e_mean;
+			dWs[c] = e_err;
+
+		}
+
+		// Save files
+
+		to_file(filename_begin + ".txt" , Ws);
+		to_file(filename_begin + "_error" + ".txt" , dWs);
+		
+	}
+
 	// generate output file with <epsilon_m(r)> and uncertainty
 	void print_e_m(std::string filename, size_type m, size_type c)
 	{
@@ -1229,6 +1401,8 @@ public:
 		
 	}
 
+	
+
 	// generate output file with values of W(r) for each centrality class
 	void print_rho(std::string filename, size_type Nr)
 	{
@@ -1246,7 +1420,7 @@ public:
 		to_file(filename, rhos);
 	}
 
-	bool is_in_centrality_class(size_type profile_index, size_type centrality_index)
+	bool is_in_centrality_class(size_type profile_index, size_type centrality_index) const
 	{
 		assert(centrality_index != 0);
 		number_type mult_min = percent_mult_[centrality_index];

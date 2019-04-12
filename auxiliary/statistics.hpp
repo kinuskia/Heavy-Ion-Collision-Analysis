@@ -188,4 +188,27 @@ number_type sign(number_type value)
 	return sign_value;
 }
 
+
+// histogram methods:
+
+// Input: Vector of samples of a random variable
+// Output: Vector of bin edges, vector of bin values (in-place)
+template<typename number_type>
+void histogram(std::vector<number_type> samples, std::vector<number_type> & edges, std::vector<std::size_t> & frequencies)
+{
+	typedef std::size_t size_type;
+	for (size_type i = 0; i < samples.size(); ++i) // loop over sample items
+	{
+		// sort in in the correct bin:
+		for (size_type j = 0; j < edges.size()-1; ++j)
+		{
+			if ((edges[j] <= samples[i]) && (samples[i] < edges[j+1]))
+			{
+				frequencies[j]++;
+				break;
+			}
+		}
+	}
+}
+
 #endif

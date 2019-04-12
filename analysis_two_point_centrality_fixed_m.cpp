@@ -40,8 +40,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	std::cout << current_time-start << "s: " << "Data has been read in and normalized.\n"; 
 
 	
-	// Print file with the following columns: impact parameter, number of participants, multiplicity
-	PbPb.collision_specs_to_file("output/collision_specs.txt");
+	
 
 	// compute the respective multiplicity limits for specific centrality classes
 	std::vector<number_type> classes(6);
