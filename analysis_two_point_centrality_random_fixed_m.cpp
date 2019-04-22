@@ -44,19 +44,18 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	PbPb.collision_specs_to_file("output/collision_specs.txt");
 
 	// compute the respective multiplicity limits for specific centrality classes
-	std::vector<number_type> classes(6);
+	std::vector<number_type> classes(11);
 	classes[0] = 0;
-	classes[1] = 5;
-	classes[2] = 10;
-	classes[3] = 20; // this generates the classes 0-5%, 5-10, 10-20, 20-30, ..., 80-90, 90-100
-	classes[4] = 30;
-	classes[5] = 40;
-	// classes[6] = 50;
-	// classes[7] = 60;
-	// classes[8] = 70;
-	// classes[9] = 80;
-	// classes[10] = 90;
-	// classes[11] = 100;
+	classes[1] = 1;
+	classes[2] = 2;
+	classes[3] = 3; 
+	classes[4] = 4;
+	classes[5] = 5;
+	classes[6] = 6;
+	classes[7] = 7;
+	classes[8] = 8;
+	classes[9] = 9; 
+	classes[10] = 10;
 	PbPb.get_percentiles(classes);
 
 

@@ -801,7 +801,7 @@ public:
 		}
 
 		mean(coeffs, coeff_mean, coeff_err);
-
+		std::cout << "class size: " << coeffs.size() << "\n";
 		std::time_t current_time = std::time(nullptr);
 		std::cout << current_time-start << "s: " << "Backgound one-mode-fluctuation has been computed.\n";
 	}
@@ -1426,7 +1426,7 @@ public:
 		number_type mult_min = percent_mult_[centrality_index];
 		number_type mult_max = percent_mult_[centrality_index-1];
 		number_type mult = multiplicities_[profile_index];
-		if (mult < mult_min || mult > mult_max ) // if profile not in centrality class
+		if (mult <= mult_min || mult > mult_max ) // if profile not in centrality class
 		{
 			return false;
 		}

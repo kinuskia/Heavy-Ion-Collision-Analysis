@@ -5,7 +5,8 @@ modes = [0, 1, 2, 3, 4]
 #modes = [0, 1]
 counter_fig = 0
 
-N = 200
+N = 385.13
+s = 21.67
 k = 1
 
 
@@ -30,7 +31,7 @@ for mode in modes:
 	y = np.zeros(lMax)
 	for i in range(0, lMax):
 		l[i] = i+1
-		y[i] = (-1)**mode/2./np.pi**2/N/clm[i, mode]*(1.+1./k) + (1-1./N)*one_points[mode, i]*one_points[mode, i]
+		y[i] = (-1)**mode/2./np.pi**2/N/clm[i, mode]*(1.+1./k) + (1-1./N+s*s/N/N)*one_points[mode, i]*one_points[mode, i]
 	plt.scatter(l, y, label="IPSM", s=100, color = "orangered", marker= "+")
 	plt.xlabel("l")
 	plt.ylabel("$G_l^{(" + str(mode)  + ")}$")

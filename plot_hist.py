@@ -20,3 +20,10 @@ plt.plot(b, n_b, color = "black")
 plt.errorbar(b, n_b, yerr= n_b_error, linestyle = 'none', elinewidth=1, capsize = 3, capthick = 1, color = "blue")
 plt.savefig("plots/b_hist.pdf", format='pdf', bbox_inches = "tight")
 plt.close(2)
+
+# check integral
+integral = 0
+width = mult[1]-mult[0]
+for i in range(0, len(mult)):
+	integral += width*n_mult[i]
+print("integral multiplicity: ", integral)

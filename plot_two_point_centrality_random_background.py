@@ -2,14 +2,14 @@ import matplotlib.pyplot as plt
 import numpy as np 
 
 
-percentiles = [0, 5, 10, 20, 30, 40]
+percentiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 counter_fig = 0
 
 # modulus plots
 for p in range(1, len(percentiles)):
 	counter_fig = counter_fig + 1
 	plt.figure(counter_fig)
-	plt.figure(figsize=(10,10))
+	plt.figure(figsize=(10,8))
 	plt.rcParams.update({'font.size': 23})
 	plt.rcParams['axes.titlepad'] = 20
 	source = 'output/two_point_random_background_' + str(percentiles[p-1]) + '-' + str(percentiles[p])  + '_real' +'.txt'
@@ -19,8 +19,8 @@ for p in range(1, len(percentiles)):
 	#, extent = (-0.5+1, len(profile[0,:])-0.5+1, len(profile[:,0])-0.5+1, -0.5+1)
 	plt.xlabel("$l$")
 	plt.ylabel("$m$")
-	centrality_class = "centrality class " + str(percentiles[p-1]) + '-' + str(percentiles[p]) + '%'
-	plt.title("$\\left\\langle\\epsilon^{(0)}_{0} \\epsilon^{(m)}_{l}\\right\\rangle$, "+centrality_class)
+	centrality_class = str(percentiles[p-1]) + '-' + str(percentiles[p]) + '%'
+	plt.title("$\\left\\langle\\epsilon^{(0)}_{0} \\epsilon^{(m)}_{l}\\right\\rangle_\\circ$, "+centrality_class)
 	plt.colorbar()
 	filename = "plots/two_point_random_background_real_" + str(percentiles[p-1]) + "-" + str(percentiles[p]) + ".pdf"
 	plt.savefig(filename, format='pdf', bbox_inches = "tight")
