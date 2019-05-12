@@ -5,7 +5,7 @@ import numpy as np
 
 #modes = [0, 1, 2, 3, 4, 5]
 #modes = [0, 1]
-percentiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+percentiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
 counter_fig = 0
 
 for p in range(1, len(percentiles)):
@@ -33,7 +33,7 @@ for p in range(1, len(percentiles)):
 	plt.title("$\\bar{\\epsilon}_l^{(m)}$, "+centrality_class)
 	filename = "plots/one_point_" + str(percentiles[p-1]) + "-" + str(percentiles[p]) + ".pdf"
 	plt.savefig(filename, format='pdf', bbox_inches = "tight")
-	plt.close()
+	plt.close(counter_fig)
 
 
 

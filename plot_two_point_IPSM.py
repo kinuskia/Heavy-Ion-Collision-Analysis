@@ -5,13 +5,14 @@ modes = [0, 1, 2, 3, 4]
 #modes = [0, 1]
 counter_fig = 0
 
-N = 385.13
-s = 21.67
-k = 1
 
+
+N = 100
+s2_w = 0
+s2_N = 0
 
 clm = np.loadtxt("output/clm.txt")
-lMax = 5
+lMax = 10
 
 trento_gauge = 1
 # modulus plots
@@ -25,20 +26,20 @@ for mode in modes:
 	ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 	ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 	#import one-mode expectation values
-	source_one_point = 'output/one_point_0-5.txt'
+	source_one_point = 'output/one_point_20-21.txt'
 	one_points = np.loadtxt(source_one_point)
 	l = np.zeros(lMax)
 	y = np.zeros(lMax)
 	for i in range(0, lMax):
 		l[i] = i+1
-		y[i] = (-1)**mode/2./np.pi**2/N/clm[i, mode]*(1.+1./k) + (1-1./N+s*s/N/N)*one_points[mode, i]*one_points[mode, i]
+		y[i] = (-1)**mode/2./np.pi**2/N/clm[i, mode]*(1.+s2_w) + (1-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, i]
 	plt.scatter(l, y, label="IPSM", s=100, color = "orangered", marker= "+")
 	plt.xlabel("l")
 	plt.ylabel("$G_l^{(" + str(mode)  + ")}$")
 	plt.title("m = " +str(mode))
 	# Trento prediction
-	filename_trento = "output/two_point_random_0-5_m" + str(mode) + "_real.txt"
-	filename_trento_error = "output/two_point_random_0-5_m" + str(mode) + "_real_error.txt"
+	filename_trento = "output/two_point_random_20-21_m" + str(mode) + "_real.txt"
+	filename_trento_error = "output/two_point_random_20-21_m" + str(mode) + "_real_error.txt"
 	trento = np.loadtxt(filename_trento)
 	trento_error = np.loadtxt(filename_trento_error)
 	y_trento = np.zeros(lMax)
@@ -56,6 +57,6 @@ for mode in modes:
 
 
 
-
+print(1./clm[0,1]/2/np.pi/np.pi)
 
 
