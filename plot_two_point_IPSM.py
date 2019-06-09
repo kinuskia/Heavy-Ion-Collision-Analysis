@@ -6,57 +6,87 @@ modes = [0, 1, 2, 3, 4]
 counter_fig = 0
 
 
+#0-1
+N = 190
+s2_N = 3**2
+s2_w = 0.2**2
 
-N = 100
-s2_w = 0
-s2_N = 0
+#20-21
+# N = 146
+# s2_N = 2**2
+# s2_w = 0.8**2
 
 clm = np.loadtxt("output/clm.txt")
-lMax = 10
+lMax = 5
 
 trento_gauge = 1
 # modulus plots
 for mode in modes:
 	counter_fig = counter_fig + 1
 	plt.figure(counter_fig)
-	plt.figure(figsize=(10,7.3))
 	plt.rcParams.update({'font.size': 20})
 	from matplotlib.ticker import MaxNLocator
 	ax = plt.figure().gca()
 	ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 	ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+	plt.figure(figsize=(5.0,2.0))
 	#import one-mode expectation values
-	source_one_point = 'output/one_point_20-21.txt'
+	#source_one_point = 'output/one_point_20-21.txt'
+	source_one_point = 'output/one_point_0-1.txt'
 	one_points = np.loadtxt(source_one_point)
 	l = np.zeros(lMax)
 	y = np.zeros(lMax)
+	y[0] = 1.0/np.pi/np.pi*(s2_w/N+s2_N/N/N)
 	for i in range(0, lMax):
 		l[i] = i+1
-		y[i] = (-1)**mode/2./np.pi**2/N/clm[i, mode]*(1.+s2_w) + (1-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, i]
+		if mode == 0:
+			if i == 0:
+				continue
+			else:
+				y[i] = 1.0/2./np.pi**2/N/clm[i-1, mode]*(1.+s2_w) 
+		else:
+			y[i] = (-1.0)**mode/2./np.pi**2/N/clm[i, mode]*(1.+s2_w) + (1-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, i]
+
+		# # print useful output
+		# if mode == 0:
+		# 	if i == 0:
+		# 		continue
+		# 	else:
+		# 		print(y[i]*2*np.pi*np.pi*clm[i-1,mode])
+				
 	plt.scatter(l, y, label="IPSM", s=100, color = "orangered", marker= "+")
 	plt.xlabel("l")
 	plt.ylabel("$G_l^{(" + str(mode)  + ")}$")
-	plt.title("m = " +str(mode))
+	#plt.title("m = " +str(mode))
 	# Trento prediction
-	filename_trento = "output/two_point_random_20-21_m" + str(mode) + "_real.txt"
-	filename_trento_error = "output/two_point_random_20-21_m" + str(mode) + "_real_error.txt"
+	# filename_trento = "output/two_point_random_20-21_m" + str(mode) + "_real.txt"
+	# filename_trento_error = "output/two_point_random_20-21_m" + str(mode) + "_real_error.txt"
+	# filename_trento_one = 'output/one_point_20-21' +'.txt'
+	filename_trento = "output/two_point_random_0-1_m" + str(mode) + "_real.txt"
+	filename_trento_error = "output/two_point_random_0-1_m" + str(mode) + "_real_error.txt"
+	filename_trento_one = 'output/one_point_0-1' +'.txt'
+
 	trento = np.loadtxt(filename_trento)
 	trento_error = np.loadtxt(filename_trento_error)
+	trento_one_ml = np.loadtxt(filename_trento_one)
 	y_trento = np.zeros(lMax)
 	y_trento_error = np.zeros(lMax)
 	for i in range(0, lMax):
 		y_trento[i] = trento[i,i]
-		y_trento_error[i] =abs(trento_error[i,i])
+		if ((i == 0) & (mode == 0)):
+			y_trento[i] -= trento_one_ml[mode, i] * trento_one_ml[mode, i]
+		y_trento_error[i] =abs(trento_error[i,i]) # WHAT ABOUT m=0 ?
 	plt.scatter(l, y_trento, s=100, color = "green", label="TRENTo", marker= "x")
 	#plt.errorbar(l, y_trento, yerr = y_trento_error, linestyle = "none", elinewidth=2, capsize = 6, capthick = 2, color="green")
-	plt.legend(loc='best')
-	filename = "plots/two_point_modules_IPSM"  + "_m" + str(mode) + ".pdf"
+	#plt.legend(loc='best')
+	filename = "plots/two_point_modules_IPSM"  + "_m" + str(mode) + "_0-1" + ".pdf"
 	plt.savefig(filename, format='pdf', bbox_inches = "tight")
-	plt.close()
+	plt.close(counter_fig)
 
 
 
 
-print(1./clm[0,1]/2/np.pi/np.pi)
+
+
 
 

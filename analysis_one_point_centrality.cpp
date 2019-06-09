@@ -111,22 +111,22 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	//std::cout << PbPb.integ_test() << "\n";
 
-	// compute expectation value of background coefficient
-	std::vector<number_type> eps_00(0);
-	std::vector<number_type> eps_00_err(0);
-	for (int c = 1; c < classes.size(); ++c)
-	{
-		std::cout << " class: " << classes[c] << "%" << "\n";
-		number_type coeff_mean;
-		number_type coeff_err;
-		PbPb.getOnePointFunction_00(c, coeff_mean, coeff_err, start);
-		eps_00.push_back(coeff_mean);
-		eps_00_err.push_back(coeff_err);
-	}
-	std::vector<std::vector<number_type>> eps_00_data(2);
-	eps_00_data[0] = eps_00;
-	eps_00_data[1] = eps_00_err;
-	to_file("output/background_coeffs.txt", eps_00_data);
+	// // compute expectation value of background coefficient
+	// std::vector<number_type> eps_00(0);
+	// std::vector<number_type> eps_00_err(0);
+	// for (int c = 1; c < classes.size(); ++c)
+	// {
+	// 	std::cout << " class: " << classes[c] << "%" << "\n";
+	// 	number_type coeff_mean;
+	// 	number_type coeff_err;
+	// 	PbPb.getOnePointFunction_00(c, coeff_mean, coeff_err, start);
+	// 	eps_00.push_back(coeff_mean);
+	// 	eps_00_err.push_back(coeff_err);
+	// }
+	// std::vector<std::vector<number_type>> eps_00_data(2);
+	// eps_00_data[0] = eps_00;
+	// eps_00_data[1] = eps_00_err;
+	// to_file("output/background_coeffs.txt", eps_00_data);
 
 
 	for (int c = 1; c < classes.size(); ++c)

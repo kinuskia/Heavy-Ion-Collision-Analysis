@@ -782,29 +782,29 @@ public:
 		}
 	}
 
-	// Compute ensemble-averaged expectation value of background coefficient
-	void getOnePointFunction_00(size_type centrality_index, number_type & coeff_mean, number_type & coeff_err, std::time_t start)
-	{
+	// // Compute ensemble-averaged expectation value of background coefficient
+	// void getOnePointFunction_00(size_type centrality_index, number_type & coeff_mean, number_type & coeff_err, std::time_t start)
+	// {
 
-		std::vector<number_type> coeffs(0);
+	// 	std::vector<number_type> coeffs(0);
 
-		for (size_type k = 0; k < profiles_.size(); ++k)
-		{
-			// Skip profile if not in centrality class
-			if (!is_in_centrality_class(k, centrality_index))
-			{
-				continue;
-			}
-			number_type current_coeff;
-			current_coeff = getBackgroundCoefficient(k);
-			coeffs.push_back(current_coeff);
-		}
+	// 	for (size_type k = 0; k < profiles_.size(); ++k)
+	// 	{
+	// 		// Skip profile if not in centrality class
+	// 		if (!is_in_centrality_class(k, centrality_index))
+	// 		{
+	// 			continue;
+	// 		}
+	// 		number_type current_coeff;
+	// 		current_coeff = getBackgroundCoefficient(k);
+	// 		coeffs.push_back(current_coeff);
+	// 	}
 
-		mean(coeffs, coeff_mean, coeff_err);
-		std::cout << "class size: " << coeffs.size() << "\n";
-		std::time_t current_time = std::time(nullptr);
-		std::cout << current_time-start << "s: " << "Backgound one-mode-fluctuation has been computed.\n";
-	}
+	// 	mean(coeffs, coeff_mean, coeff_err);
+	// 	std::cout << "class size: " << coeffs.size() << "\n";
+	// 	std::time_t current_time = std::time(nullptr);
+	// 	std::cout << current_time-start << "s: " << "Backgound one-mode-fluctuation has been computed.\n";
+	// }
 
 	// Compute one-point correlation function (=expectation value e_ml) for given centrality class
 	void getOnePointFunction(size_type centrality_index, complex_matrix<number_type> & coeffs_mean, complex_matrix<number_type> & coeffs_err, std::time_t start)
@@ -1039,79 +1039,79 @@ public:
 
 	}
 
-	// Method to compute a two-point correlation function of the form <e_00 eml> (e_00 being the background coefficient)
-	void getTwoPointFunction_background(size_type centrality_index, complex_matrix<number_type> & TwoPointFunction, complex_matrix<number_type> & TwoPointFunction_err, std::time_t start)
-	{
-		std::time_t current_time = std::time(nullptr);
+	// // Method to compute a two-point correlation function of the form <e_00 eml> (e_00 being the background coefficient)
+	// void getTwoPointFunction_background(size_type centrality_index, complex_matrix<number_type> & TwoPointFunction, complex_matrix<number_type> & TwoPointFunction_err, std::time_t start)
+	// {
+	// 	std::time_t current_time = std::time(nullptr);
 
-		/* Bessel-decompose profile parts with quantum number m */
-		size_type mMax = (TwoPointFunction.rowsize()-1)/2; // TwoPoint contains m=-mMax...0...mMax
-		size_type lMax = TwoPointFunction.colsize();
-
-
-
-		// compute necessary bessel zeros
-		get_Bessel_deriv_zeros(mMax+1, lMax);
-
-		// compute two-point object e_00 e_ml for each profile in the centrality class
-
-		std::vector<complex_matrix<number_type>> Two_point_objects(0);
-
-		for (size_type k = 0; k < profiles_.size(); ++k)
-		{
-			// Skip profile if not in centrality class
-			if (!is_in_centrality_class(k, centrality_index))
-			{
-				continue;
-			}
+	// 	/* Bessel-decompose profile parts with quantum number m */
+	// 	size_type mMax = (TwoPointFunction.rowsize()-1)/2; // TwoPoint contains m=-mMax...0...mMax
+	// 	size_type lMax = TwoPointFunction.colsize();
 
 
-			complex_matrix<number_type> current_coeff(mMax+1, lMax);
-			BesselDecomposeProfile(k, centrality_index, current_coeff);
-			number_type current_background = getBackgroundCoefficient(k);
-			// fill current two-point object e_ml1 e*_ml2
-			complex_matrix<number_type> current_two_point(2*mMax+1, lMax);
-			for (size_type m = 0; m <= mMax; ++m)
-			{
-				for (size_type l = 0; l < lMax; ++l)
-				{
-					// Case m >= 0
-					number_type eml_pos_real = current_coeff.get_real(m, l);
-					number_type eml_pos_imag = current_coeff.get_imag(m, l);
+
+	// 	// compute necessary bessel zeros
+	// 	get_Bessel_deriv_zeros(mMax+1, lMax);
+
+	// 	// compute two-point object e_00 e_ml for each profile in the centrality class
+
+	// 	std::vector<complex_matrix<number_type>> Two_point_objects(0);
+
+	// 	for (size_type k = 0; k < profiles_.size(); ++k)
+	// 	{
+	// 		// Skip profile if not in centrality class
+	// 		if (!is_in_centrality_class(k, centrality_index))
+	// 		{
+	// 			continue;
+	// 		}
+
+
+	// 		complex_matrix<number_type> current_coeff(mMax+1, lMax);
+	// 		BesselDecomposeProfile(k, centrality_index, current_coeff);
+	// 		number_type current_background = getBackgroundCoefficient(k);
+	// 		// fill current two-point object e_ml1 e*_ml2
+	// 		complex_matrix<number_type> current_two_point(2*mMax+1, lMax);
+	// 		for (size_type m = 0; m <= mMax; ++m)
+	// 		{
+	// 			for (size_type l = 0; l < lMax; ++l)
+	// 			{
+	// 				// Case m >= 0
+	// 				number_type eml_pos_real = current_coeff.get_real(m, l);
+	// 				number_type eml_pos_imag = current_coeff.get_imag(m, l);
 					
-					number_type result_pos_real = current_background*eml_pos_real;
-					number_type result_pos_imag = current_background*eml_pos_imag;
+	// 				number_type result_pos_real = current_background*eml_pos_real;
+	// 				number_type result_pos_imag = current_background*eml_pos_imag;
 
-					current_two_point.set_entry(m+mMax, l, result_pos_real, result_pos_imag);
+	// 				current_two_point.set_entry(m+mMax, l, result_pos_real, result_pos_imag);
 
-					// case m < 0
-					number_type eml_neg_real = current_coeff.get_real(m, l);
-					number_type eml_neg_imag = current_coeff.get_imag(m, l)*(-1.0);
-					if (m%2 == 1)
-					{
-						eml_neg_real *= -1.0;
-						eml_neg_imag *= -1.0;
-					}
+	// 				// case m < 0
+	// 				number_type eml_neg_real = current_coeff.get_real(m, l);
+	// 				number_type eml_neg_imag = current_coeff.get_imag(m, l)*(-1.0);
+	// 				if (m%2 == 1)
+	// 				{
+	// 					eml_neg_real *= -1.0;
+	// 					eml_neg_imag *= -1.0;
+	// 				}
 					
-					number_type result_neg_real = current_background*eml_neg_real;
-					number_type result_neg_imag = current_background*eml_neg_imag;
+	// 				number_type result_neg_real = current_background*eml_neg_real;
+	// 				number_type result_neg_imag = current_background*eml_neg_imag;
 
-					current_two_point.set_entry(mMax-m, l, result_neg_real, result_neg_imag);
+	// 				current_two_point.set_entry(mMax-m, l, result_neg_real, result_neg_imag);
 
-				}
-			}
+	// 			}
+	// 		}
 			
-			Two_point_objects.push_back(current_two_point);
-		}
+	// 		Two_point_objects.push_back(current_two_point);
+	// 	}
 
-		current_time = std::time(nullptr);
-		std::cout << current_time-start << "s: " << "Background two-point objects have been computed.\n"; 
+	// 	current_time = std::time(nullptr);
+	// 	std::cout << current_time-start << "s: " << "Background two-point objects have been computed.\n"; 
 
-		// Compute ensemble mean of Fourier-Bessel coefficients
-		mean(Two_point_objects, TwoPointFunction, TwoPointFunction_err);
+	// 	// Compute ensemble mean of Fourier-Bessel coefficients
+	// 	mean(Two_point_objects, TwoPointFunction, TwoPointFunction_err);
 
 
-	}
+	// }
 
 	// Bessel-decompose profile k and save data to current_coeff matrix
 	void BesselDecomposeProfile(size_type k, size_type centrality_index, complex_matrix<number_type> & current_coeff)
@@ -1123,7 +1123,20 @@ public:
 		{
 			for (size_type l = 1; l <= lMax; ++l)
 			{
-				number_type real = integ_fourier_r(k, centrality_index, m, l, 0, R_-grid_step_)/c(m, l);
+				number_type real = integ_fourier_r(k, centrality_index, m, l, 0, R_-grid_step_);
+				// choose correct back transformation formula
+				if (m == 0 && l == 1)
+				{
+					real /= 1.0;
+				}
+				else if (m == 0 && l > 1)
+				{
+					real /= c(m, l-1); 
+				}
+				else
+				{
+					real /= c(m, l);
+				}
 				number_type imag;
 				if (m == 0)
 				{
@@ -1149,7 +1162,20 @@ public:
 		
 		for (size_type l = 1; l <= lMax; ++l)
 		{
-			number_type real = integ_fourier_r(k, centrality_index, m, l, 0, R_-grid_step_)/c(m, l);
+			number_type real = integ_fourier_r(k, centrality_index, m, l, 0, R_-grid_step_);
+			// choose correct back transformation formula
+			if (m == 0 && l == 1)
+			{
+				real /= 1.0;
+			}
+			else if (m == 0 && l > 1)
+			{
+				real /= c(m, l-1); 
+			}
+			else
+			{
+				real /= c(m, l);
+			}
 			number_type imag;
 			if (m == 0)
 			{
@@ -1174,7 +1200,20 @@ public:
 		
 		for (size_type m = 0; m < m_size; ++m)
 		{
-			number_type real = integ_fourier_r(k, centrality_index, m, l, 0, R_-grid_step_)/c(m, l);
+			number_type real = integ_fourier_r(k, centrality_index, m, l, 0, R_-grid_step_);
+			// choose correct back transformation formula
+			if (m == 0 && l == 1)
+			{
+				real /= 1.0;
+			}
+			else if (m == 0 && l > 1)
+			{
+				real /= c(m, l-1); 
+			}
+			else
+			{
+				real /= c(m, l);
+			}
 			number_type imag;
 			if (m == 0)
 			{
@@ -1190,11 +1229,11 @@ public:
 	
 	}
 
-	// get coefficient e_00 for profile k
-	number_type getBackgroundCoefficient(size_type k)
-	{
-		return -1. + integ_r(k, 0, R_-grid_step_);
-	}
+	// // get coefficient e_00 for profile k
+	// number_type getBackgroundCoefficient(size_type k)
+	// {
+	// 	return -1. + integ_r(k, 0, R_-grid_step_);
+	// }
 
 	/* Do a FFT decomposition of energy density profiles with respect to phi
 	   yielding profiles of the form
@@ -1623,23 +1662,38 @@ double interpolate_at_m_wrapper(double r, void* params)
 	std::size_t c = params_->centrality_index;
 	size_type Nm = params_->pt_Collision->Nm();
 
+	// if (m < Nm/2)
+	// {
+	// 	return ((params_->pt_Collision->interpolate_fourier(k, m, r)) )*r*(params_->pt_Collision->Bessel(m, l, r, c)); // times r because of dr measure
+	// }
+	// else // m> Nm/2 calls refer to the imaginary part of E_(Nm-m) (r). 
+	// {
+	// 	return ((params_->pt_Collision->interpolate_fourier(k, m, r))  )*r*(params_->pt_Collision->Bessel(Nm-m, l, r, c)); // times r because of dr measure
+	// }
+
 	if (m < Nm/2)
 	{
-		return ((params_->pt_Collision->interpolate_fourier(k, m, r)) )*r*(params_->pt_Collision->Bessel(m, l, r, c)); // times r because of dr measure
+		if (m == 0 && l == 1)
+		{
+			return 2.*((params_->pt_Collision->interpolate_fourier(k, m, r)) )*r; // times r because of dr measure	
+		}
+		else if (m == 0 && l > 1)
+		{
+			return ((params_->pt_Collision->interpolate_fourier(k, m, r)) )*r*(params_->pt_Collision->Bessel(m, l-1, r, c)); // times r because of dr measure	
+		}
+		else
+		{
+			return ((params_->pt_Collision->interpolate_fourier(k, m, r)) )*r*(params_->pt_Collision->Bessel(m, l, r, c)); // times r because of dr measure	
+		}
+
+		
 	}
-	else // m> Nm/2 calls refer to the imaginary part of E_(Nm-m) (r). 
+	else // m> Nm/2 calls refer to the imaginary part of E_(Nm-m) (r). No case distinction needed because imaginary part = 0 for m=0
 	{
 		return ((params_->pt_Collision->interpolate_fourier(k, m, r))  )*r*(params_->pt_Collision->Bessel(Nm-m, l, r, c)); // times r because of dr measure
 	}
 
-	// if (m < Nm/2)
-	// {
-	// 	return ((params_->pt_Collision->interpolate_fourier(k, m, r)) -params_->pt_Collision->W(r,c)/3.1415926 )*r*(params_->pt_Collision->Bessel(m, l, r, c)); // times r because of dr measure
-	// }
-	// else // m> Nm/2 calls refer to the imaginary part of E_(Nm-m) (r). 
-	// {
-	// 	return ((params_->pt_Collision->interpolate_fourier(k, m, r)) -params_->pt_Collision->W(r,c)/3.1415926 )*r*(params_->pt_Collision->Bessel(Nm-m, l, r, c)); // times r because of dr measure
-	// }
+
 
 
 	// if (m < Nm/2)
