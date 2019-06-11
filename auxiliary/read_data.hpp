@@ -126,7 +126,7 @@ void read_data(std::string filename, gsl_matrix* data, number_type & impact_para
 
 }
 
-// overload if one is just interested in the collision specs but bot the profiles
+// overload if one is just interested in the collision specs but not the profiles
 template<typename number_type>
 void read_data(std::string filename, number_type & impact_parameter, number_type & n_participants, number_type & multiplicity)
 {

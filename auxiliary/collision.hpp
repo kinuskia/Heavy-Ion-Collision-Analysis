@@ -19,6 +19,7 @@
 #include "bessel_deriv_zero.hpp"
 #include <fstream>
 #include <random>
+#include <cmath>
 
 
 // Functions to transform polar coordinates to cartesian coordinates
@@ -139,7 +140,7 @@ public:
 	// }
 
 	// read in data files
-	void read_in(std::string filename_begin, std::string fileformat, size_type n_files, bool import_profiles = true)
+	void read_in(std::string filename_begin, std::string fileformat, size_type n_files, number_type exponent, bool import_profiles = true)
 	{
 		// initialize random devices to sample random reaction plane angles
 		std::random_device rd;
@@ -156,6 +157,16 @@ public:
 			{	
 				gsl_matrix* data = gsl_matrix_alloc(grid_size_, grid_size_);
 				read_data(filename, data, impact_param, n_part, mult);
+				// compute the power of the profiles
+				for (size_type i = 0; i < data->size1; ++i)
+				{
+					for (size_type j = 0; j < data->size2; ++j)
+					{
+						number_type density = gsl_matrix_get(data, i, j);
+						density = pow(density, exponent);
+						gsl_matrix_set(data, i, j, density);	
+					}
+				}
 				profiles_.push_back(data);
 			}
 			else

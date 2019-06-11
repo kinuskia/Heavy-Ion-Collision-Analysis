@@ -21,7 +21,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	// Read in and pre-process Trento data
 	Collision<number_type> PbPb(10, .2); // Create Collision object
 
-	PbPb.read_in(filename, fileformat, n_files); // read in Trento event files
+	PbPb.read_in(filename, fileformat, n_files, 4./3); // read in Trento event files
 
 	//PbPb.normalize(1); // normalize events so that integral = 1
 

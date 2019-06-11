@@ -19,17 +19,20 @@ int main ()
 	typedef double number_type;
 
 	// Set up initial-state model
-	Model<number_type> model;
+	Model<number_type> model(6e-2);
+
+	model.initialize_W("weight_functions.txt");
+
 
 	// Set up Fourier-Bessel decomposition object
 	// with rMax = 10 as maximal radial integration length
-	FBDecompositionSimplified<number_type> decomposition(model, 10.);
+	FBDecompositionSimplified<number_type> decomposition(model, 9.604);
 
 	decomposition.initialize();
 
 	// Compute <e_l1^(m)e_l2^(-m)> as a function of l
 	int mMax = 4;
-	int lMax = 4;
+	int lMax = 6;
 
 	for (int m = mMax; m >= 0; --m)
 	{

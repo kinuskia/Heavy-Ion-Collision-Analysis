@@ -21,7 +21,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	// Read in and pre-process Trento data
 	Collision<number_type> PbPb(10, .2); // Create Collision object
 
-	PbPb.read_in(filename, fileformat, n_files, false); // read in Trento event files
+	PbPb.read_in(filename, fileformat, n_files, 1., false); // read in Trento event files
 
 	// Print file with the following columns: impact parameter, number of participants, multiplicity
 	PbPb.collision_specs_to_file("output/collision_specs.txt");

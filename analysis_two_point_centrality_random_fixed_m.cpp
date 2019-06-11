@@ -24,7 +24,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	// Randomize reaction plane angle
 	PbPb.random_reaction_plane(true);
 
-	PbPb.read_in(filename, fileformat, n_files, true); // read in Trento event files
+	PbPb.read_in(filename, fileformat, n_files, 4./3, true); // read in Trento event files + convert to energy density
 
 	//PbPb.normalize(1); // normalize events so that integral = 1
 

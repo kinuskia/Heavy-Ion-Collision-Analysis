@@ -21,20 +21,16 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	// Read in and pre-process Trento data
 	Collision<number_type> PbPb(10, .2); // Create Collision object
 
-	PbPb.read_in(filename, fileformat, n_files); // read in Trento event files
+	PbPb.read_in(filename, fileformat, n_files, 4./3); // read in Trento event files
 
 
 	PbPb.centralize(); // shift data so that barycentre at origin
 
 
 	// define the respective multiplicity limits for specific centrality classes
-	std::vector<number_type> classes(6);
+	std::vector<number_type> classes(2);
 	classes[0] = 0;
 	classes[1] = 2;
-	classes[2] = 4;
-	classes[3] = 6; // this generates the classes 0-5%, 5-10, 10-20, 20-30, ..., 80-90, 90-100
-	classes[4] = 8;
-	classes[5] = 10;
 	PbPb.get_percentiles(classes);
 
 	std::time_t current_time = std::time(nullptr);
