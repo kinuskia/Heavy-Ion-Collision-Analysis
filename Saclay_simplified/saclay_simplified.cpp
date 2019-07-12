@@ -5,7 +5,9 @@
 #include "model.hpp"
 #include "../auxiliary/fbdecomposition_s.hpp" // load after (!) model.hpp
 #include "../auxiliary/to_file.hpp"
+#include "../auxiliary/to_size_t.hpp"
 
+#include <string>
 
 
 /*
@@ -13,15 +15,19 @@ Idea: In the file "model.hpp" one specifies the position space one-point
 and two-point correlation function of an arbitrary initial-state model.
 */
 
-int main ()
+int main (int argc, char* argv[]) // command-line input: centrality_min, centrality_max, IR regulator m, saturation scale Qs0
 {
 	typedef std::size_t size_type;
 	typedef double number_type;
 
 	// Set up initial-state model
-	Model<number_type> model(6e-2);
-
-	model.initialize_W("weight_functions.txt");
+	size_type centrality_min = to_size_t(argv[1]);
+	size_type centrality_max = to_size_t(argv[2]);
+	number_type m_IR = std::stod(argv[3]);
+	number_type Qs0 = std::stod(argv[4]);
+	Model<number_type> model(m_IR, Qs0);
+	std::string centrality = std::to_string(centrality_min) +  "-" + std::to_string(centrality_max);
+	model.initialize_W("weight_functions_"+centrality+".txt");
 
 
 	// Set up Fourier-Bessel decomposition object
@@ -51,7 +57,7 @@ int main ()
 		}
 
 		// save result to text file
-		std::string filename = "output/two_point_random_connected_m_";
+		std::string filename = "output/"+ centrality +"/two_point_random_connected_m_";
 		filename += std::to_string(m);
 		//filename += "_test";
 		filename += ".txt";

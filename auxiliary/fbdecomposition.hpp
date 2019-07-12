@@ -35,6 +35,7 @@ public:
 	, normalization_(1.)
 	, Nm_(128)
 	, Nr_(50)
+	, N_discret_(25)
 	{
 
 	}
@@ -56,6 +57,12 @@ public:
 	number_type get_rMax() const
 	{
 		return rMax_;
+	}
+
+	// setter for N_discret_
+	void set_N_discret(size_type N)
+	{
+		N_discret_ = N;
 	}
 
 	// integrate one-point function over phi at fixed r
@@ -231,7 +238,7 @@ public:
 	number_type integ_r(int m1, int l1, int m2, int l2, number_type phi1, number_type phi2)
 	{
 		number_type result = 0;
-		size_type N = 25;
+		size_type N = N_discret_;
 		number_type width = (rMax_-0.2)/N;
 
 		// compute integral over r1
@@ -239,15 +246,17 @@ public:
 		for (size_type i = 0; i <= N; ++i) // loop over r1
 		{
 			number_type r1 = (rMax_-0.2)*i/N;
+			//std::cout << "r1: " << r1 << "\n";
 
 			// compute integral over r2 at fixed r1
 			number_type integral_r2 = 0;
-			for (size_type j = 0; j <= N; ++j)
+			for (size_type j = 0; j < N; ++j) // one fewer grid point and offset so that f is never evaluated at the same radius as r1
 			{
-				number_type r2 = (rMax_-0.2)*j/N;
+				number_type r2 = (rMax_-0.2)*(0.5+j)/N;
 				number_type f = weight(m1, l1, r1)*weight(m2, l2, r2)*TwoPoint(r1, phi1, r2, phi2);
+				//std::cout << "phi1: " << phi1 << " phi2: " << phi2  <<  " r2: " << r2 << " f: " << f << "\n";
 				// Use trapezoidal rule
-				if ((j == 0) || (j == N))
+				if ((j == 0) || (j == (N-1)))
 				{
 					integral_r2 += f/2;
 				}
@@ -269,6 +278,9 @@ public:
 			}
 		}
 		result *= width;
+
+		//std::cout << result << "\n";
+
 
 		return result;
 	}
@@ -297,8 +309,16 @@ public:
 			for (size_type i = 0; i < Nm_; ++i)
 			{
 				number_type phi1 = 2. * pi_ * i / Nm_;
-				//fft[i] = integ_r1(m1, l1, m2, l2, phi1, phi2);
+			
 				fft[i] = integ_r(m1, l1, m2, l2, phi1, phi2);
+				// 	if (i == 0)
+				// {
+				// 	std::cout << "m1: " << m1 << " ";
+				// 	std::cout << "l1: " << l1 << " ";
+				// 	std::cout << "m2: " << m2 << " ";
+				// 	std::cout << "l2: " << l2 << " ";
+				// 	std::cout << fft[i] << "\n";
+				// }
 			}
 
 			gsl_fft_real_radix2_transform(fft, 1, Nm_);
@@ -545,6 +565,8 @@ private:
 	size_type Nr_;
 	size_type Nm_;
 	number_type normalization_;
+
+	size_type N_discret_;
 
 	const gsl_interp_type* W_interpolator_;
 	gsl_spline* W_spline_;

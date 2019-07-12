@@ -15,8 +15,10 @@ public:
 	typedef REAL number_type;
 
 	// constructor
-	Model(number_type m)
+	Model(number_type m, number_type Q0)
 	: m_(m)
+	, Q0_(Q0)
+	, pi_(3.1415926)
 	{}
 
 	// initialize W(r) function
@@ -103,16 +105,33 @@ public:
 	{
 		number_type r = sqrt(x*x+y*y);
 
-		return W(r)/3.1415926;
+		return W(r)/pi_;
 	}
 
 	// Define connected (!) position space two-point correlation function TwoPoint(x1, y1) = TwoPoint(x1, y1)*delta(x2-x1)*delta(y2-y1)
 	number_type TwoPoint(number_type x, number_type y)
 	{
-		number_type r = sqrt(x*x+y*y);
-		number_type Q2 = sqrt(OnePoint(x, y));
+		// number_type r = sqrt(x*x+y*y);
+		// number_type alpha_s = 0.4095;
+		// number_type g = sqrt(4.*pi_*alpha_s);
+		// number_type W0 = W(0.);
+		// number_type Q0 = 1.1*1+2.4*0; //GeV
+		// number_type scale = Q0*Q0*Q0*Q0/3/alpha_s/W0;
+		// number_type hc = 0.197327;
+		// number_type Q2 = sqrt(OnePoint(x, y))*sqrt(3./4)*g*sqrt(scale);
+		// return 32.*pi_/9/g/g/g/g*Q2*Q2*Q2*log(Q2/m_/m_)/scale/scale*hc*hc;
 
-		return Q2*Q2*Q2*log(Q2/m_);
+
+		//number_type r = sqrt(x*x+y*y);
+		//number_type alpha_s = 0.4095;
+		//number_type g = sqrt(4.*pi_*alpha_s);
+		number_type W0 = W(0.);
+		number_type Q0 = Q0_; //GeV
+		//number_type scale = Q0*Q0*Q0*Q0/3/alpha_s/W0;
+		number_type hc = 0.197327;
+		//number_type Q2 = sqrt(OnePoint(x, y))*sqrt(3./4)*g*sqrt(scale);
+		return 2.*hc*hc/pi_*W0*W0/Q0/Q0*pow((pi_*OnePoint(x, y)/W0),3./2)*log(Q0*Q0/m_/m_*sqrt(pi_*OnePoint(x, y)/W0));
+		
 	}
 
 private:
@@ -122,6 +141,8 @@ private:
 
 	//
 	number_type m_;
+	number_type Q0_;
+	number_type pi_;
 };
 
 

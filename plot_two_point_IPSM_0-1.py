@@ -7,14 +7,14 @@ counter_fig = 0
 
 
 #0-1
-# N = 190
-# s2_N = 3**2
-# s2_w = 0.2**2
+N = 172*0+223
+s2_N = 0.*1.7**2+0
+s2_w = 0.*0.48**2+0.633**2
 
 #20-21
-N = 146
-s2_N = 2**2
-s2_w = 0.8**2
+# N = 112*0+436
+# s2_N = 0*3.1**2+0
+# s2_w = 0*0.85**2+2.18**2
 
 clm = np.loadtxt("output/clm.txt")
 lMax = 5
@@ -31,8 +31,8 @@ for mode in modes:
 	ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 	plt.figure(figsize=(5.0,2.0))
 	#import one-mode expectation values
-	source_one_point = 'output/one_point_20-21.txt'
-	# source_one_point = 'output/one_point_0-1.txt'
+	# source_one_point = 'output/one_point_20-21.txt'
+	source_one_point = 'output/one_point_0-1.txt'
 	one_points = np.loadtxt(source_one_point)
 	l = np.zeros(lMax)
 	y = np.zeros(lMax)
@@ -59,28 +59,39 @@ for mode in modes:
 	plt.ylabel("$G_l^{(" + str(mode)  + ")}$")
 	#plt.title("m = " +str(mode))
 	# Trento prediction
-	filename_trento = "output/two_point_random_20-21_m" + str(mode) + "_real.txt"
-	filename_trento_error = "output/two_point_random_20-21_m" + str(mode) + "_real_error.txt"
-	filename_trento_one = 'output/one_point_20-21' +'.txt'
-	# filename_trento = "output/two_point_random_0-1_m" + str(mode) + "_real.txt"
-	# filename_trento_error = "output/two_point_random_0-1_m" + str(mode) + "_real_error.txt"
-	# filename_trento_one = 'output/one_point_0-1' +'.txt'
+	# filename_trento = "output/two_point_random_20-21_m" + str(mode) + "_real.txt"
+	# filename_trento_error = "output/two_point_random_20-21_m" + str(mode) + "_real_error.txt"
+	# filename_trento_one = 'output/one_point_20-21' +'.txt'
+	filename_trento = "output/two_point_random_0-1_m" + str(mode) + "_real.txt"
+	filename_trento_error = "output/two_point_random_0-1_m" + str(mode) + "_real_error.txt"
+	filename_trento_one = 'output/one_point_0-1' +'.txt'
+
+	filename_Saclay_simple = "Saclay_simplified/output/0-1/two_point_random_connected_m_" + str(mode) + ".txt"
+	filename_Saclay = "Saclay/output/0-1/two_point_random_connected_m_" + str(mode) + ".txt"
 
 	trento = np.loadtxt(filename_trento)
 	trento_error = np.loadtxt(filename_trento_error)
 	trento_one_ml = np.loadtxt(filename_trento_one)
+	saclay_simple = np.loadtxt(filename_Saclay_simple)
+	saclay = np.loadtxt(filename_Saclay)
+	y_saclay_simple = np.zeros(lMax)
+	y_saclay = np.zeros(lMax)
 	y_trento = np.zeros(lMax)
 	y_trento_error = np.zeros(lMax)
 	for i in range(0, lMax):
 		y_trento[i] = trento[i,i]
+		y_saclay_simple[i] = saclay_simple[i,i]
+		y_saclay[i] = saclay[i,i]
 		if ((i == 0) & (mode == 0)):
 			y_trento[i] -= trento_one_ml[mode, i] * trento_one_ml[mode, i]
 		y_trento_error[i] =abs(trento_error[i,i]) # WHAT ABOUT m=0 ?
 	plt.scatter(l, y_trento, s=100, color = "green", label="TRENTo", marker= "x")
+	plt.scatter(l, y_saclay_simple, s=100, color = "blue", label="Generic", marker= "1")
+	plt.scatter(l, y_saclay, s=100, color = "purple", label="Large-Nc-Glasma", marker= "*")
 	#plt.errorbar(l, y_trento, yerr = y_trento_error, linestyle = "none", elinewidth=2, capsize = 6, capthick = 2, color="green")
 	#plt.legend(loc='best')
-	# filename = "plots/two_point_modules_IPSM"  + "_m" + str(mode) + "_0-1" + ".pdf"
-	filename = "plots/two_point_modules_IPSM"  + "_m" + str(mode) + "_20-21" + ".pdf"
+	filename = "plots/two_point_modules_IPSM"  + "_m" + str(mode) + "_0-1" + ".pdf"
+	# filename = "plots/two_point_modules_IPSM"  + "_m" + str(mode) + "_20-21" + ".pdf"
 	plt.savefig(filename, format='pdf', bbox_inches = "tight")
 	plt.close(counter_fig)
 
