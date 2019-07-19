@@ -21,23 +21,23 @@ int main ()
 
 	// Set up initial-state model
 	Model<number_type> model(0.14);
-	size_type centrality_min = 20;
-	size_type centrality_max = 21;
+	size_type centrality_min = 10;
+	size_type centrality_max = 11;
 	std::string centrality = std::to_string(centrality_min) + "-" + std::to_string(centrality_max);
 	model.initialize_W("weight_functions_"+centrality+".txt");
 
 	// Set up Fourier-Bessel decomposition object
 	// with rMax = 10 as maximal radial integration length
-	FBDecomposition<number_type> decomposition(model, 0+1.*8.604);
+	FBDecomposition<number_type> decomposition(model, 9.604+0*1.*8.604);
 	decomposition.initialize();
 
 	// set number of radial grid points per dimension
-	decomposition.set_N_discret(11);
+	decomposition.set_N_discret(15);
 
 
 	// Compute <e_l1^(m)e_l2^(-m)> as a function of l
-	int mMax = 4;
-	int lMax = 6;
+	int mMax = 1;
+	int lMax = 10;
 	number_type counter = 0;
 	number_type progress_steps = 100;
 
@@ -46,7 +46,7 @@ int main ()
 	size_type nb_steps = (mMax+1)*lMax*lMax;
 	
 
-	for (int m = mMax; m >= 0; --m)
+	for (int m = mMax; m >= 1; --m) // Remember to put m=0 again
 	{
 		// save result in matrix
 		gsl_matrix* result = gsl_matrix_alloc(lMax, lMax);

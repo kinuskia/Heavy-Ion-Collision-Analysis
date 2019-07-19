@@ -17,7 +17,7 @@ s2_w = 0.*0.48**2+0.633**2
 # s2_w = 0*0.85**2+2.18**2
 
 clm = np.loadtxt("output/clm.txt")
-lMax = 5
+lMax = 10
 
 trento_gauge = 1
 # modulus plots
@@ -88,6 +88,7 @@ for mode in modes:
 	plt.scatter(l, y_trento, s=100, color = "green", label="TRENTo", marker= "x")
 	plt.scatter(l, y_saclay_simple, s=100, color = "blue", label="Generic", marker= "1")
 	plt.scatter(l, y_saclay, s=100, color = "purple", label="Large-Nc-Glasma", marker= "*")
+	plt.xticks([1,3,5,7,9])
 	#plt.errorbar(l, y_trento, yerr = y_trento_error, linestyle = "none", elinewidth=2, capsize = 6, capthick = 2, color="green")
 	#plt.legend(loc='best')
 	filename = "plots/two_point_modules_IPSM"  + "_m" + str(mode) + "_0-1" + ".pdf"

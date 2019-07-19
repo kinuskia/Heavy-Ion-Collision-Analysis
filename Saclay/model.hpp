@@ -117,7 +117,7 @@ public:
         number_type r = sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
         r /= hc;
 
-        number_type R_cutoff = 0.1/hc;
+        number_type R_cutoff = 0.01/hc;
         if (r < R_cutoff)
         {
         	r = R_cutoff;
@@ -135,7 +135,7 @@ public:
 		number_type Q2 = Q0*Q0*sqrt(3.1415926*OnePoint(b1,b2)/W0);
        
         number_type coupling=g;
-        number_type infrared_Regulator= m_*1e-2;
+        number_type infrared_Regulator= m_*1e-2; //0-1 1e-2
         number_type modifiedGamma =  (1./(2.*3.1415926*infrared_Regulator*infrared_Regulator) -r/(2.*3.1415926*infrared_Regulator ) *gsl_sf_bessel_K1(r*infrared_Regulator))/(log(4./(infrared_Regulator*infrared_Regulator*r*r))) ; //Here we have to define the bessel function! ;
         number_type Qs2bar = Q2; //sqrt(coupling*coupling/casimir*OnePoint(b1,b2)*36.);
         number_type Qs2=3.1415926*8.*modifiedGamma*Qs2bar;

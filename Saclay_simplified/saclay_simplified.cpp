@@ -38,7 +38,7 @@ int main (int argc, char* argv[]) // command-line input: centrality_min, central
 
 	// Compute <e_l1^(m)e_l2^(-m)> as a function of l
 	int mMax = 4;
-	int lMax = 6;
+	int lMax = 10;
 
 	for (int m = mMax; m >= 0; --m)
 	{
