@@ -117,12 +117,6 @@ public:
         number_type r = sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
         r /= hc;
 
-        number_type R_cutoff = 0.01/hc;
-        if (r < R_cutoff)
-        {
-        	r = R_cutoff;
-        }
-
         number_type b1= (x1+x2)/2.;
         number_type b2= (y1+y2)/2.;
         number_type casimir= (nc*nc-1.)/2./nc;
@@ -136,20 +130,24 @@ public:
        
         number_type coupling=g;
         number_type infrared_Regulator= m_*1e-2; //0-1 1e-2
+        number_type R_cutoff = 0.0001/hc;
         number_type modifiedGamma =  (1./(2.*3.1415926*infrared_Regulator*infrared_Regulator) -r/(2.*3.1415926*infrared_Regulator ) *gsl_sf_bessel_K1(r*infrared_Regulator))/(log(4./(infrared_Regulator*infrared_Regulator*r*r))) ; //Here we have to define the bessel function! ;
+        if (r < R_cutoff)
+        {
+        	modifiedGamma = 0;	
+        }
+        
         number_type Qs2bar = Q2; //sqrt(coupling*coupling/casimir*OnePoint(b1,b2)*36.);
         number_type Qs2=3.1415926*8.*modifiedGamma*Qs2bar;
         //std::cout << "scale: " << scale << "\n";
         //std::cout << "Qs2: " << Qs2 << "\n";
 
 
-		return (2./(pow(coupling,4.)*pow(r,8.))*(16.*exp(-Qs2)+32.*exp(-Qs2/2.)-64*exp(-3.*Qs2/4)-4.*exp(-1./4.*Qs2)*(Qs2-2.*Qs2bar*Qs2bar*pow(r,4.)+8.*Qs2+48)+1./8.*exp(-Qs2/2)*(Qs2*Qs2*Qs2*Qs2+(4.*Qs2*Qs2+128.)*(2.*Qs2)+16.*(2.*Qs2)*(2.*Qs2)+1024.)+2.*(Qs2bar*Qs2bar*pow(r,4.)*(Qs2-4.)+40.)))/scale/scale;
+		return (2./(pow(coupling,4.)*pow(r,8.))*(16.*exp(-Qs2)+32.*exp(-Qs2/2.)-64*exp(-3.*Qs2/4)-4.*exp(-1./4.*Qs2)*(Qs2*Qs2-2.*Qs2bar*Qs2bar*pow(r,4.)+8.*Qs2+48)+1./8.*exp(-Qs2/2)*(Qs2*Qs2*Qs2*Qs2+(4.*Qs2*Qs2+128.)*(2.*Qs2)+16.*(2.*Qs2)*(2.*Qs2)+1024.)+2.*(Qs2bar*Qs2bar*pow(r,4.)*(Qs2-4.)+40.)))/scale/scale;
         
 
-
-
-
 	}
+
 
 private:
 	const gsl_interp_type* W_interpolator_;

@@ -67,7 +67,7 @@ for mode in modes:
 	# filename_trento_one = 'output/one_point_0-1' +'.txt'
 
 	filename_Saclay_simple = "Saclay_simplified/output/20-21/two_point_random_connected_m_" + str(mode) + ".txt"
-	filename_Saclay = "Saclay/output/20-21/two_point_random_connected_m_" + str(mode) + ".txt"
+	filename_Saclay = "Saclay/output/20-21/50/two_point_random_connected_m_" + str(mode) + ".txt"
 
 	trento = np.loadtxt(filename_trento)
 	trento_error = np.loadtxt(filename_trento_error)
@@ -85,9 +85,10 @@ for mode in modes:
 		if ((i == 0) & (mode == 0)):
 			y_trento[i] -= trento_one_ml[mode, i] * trento_one_ml[mode, i]
 		y_trento_error[i] =abs(trento_error[i,i]) # WHAT ABOUT m=0 ?
-	plt.scatter(l, y_trento, s=100, color = "green", label="TRENTo", marker= "x")
-	plt.scatter(l, y_saclay_simple, s=100, color = "blue", label="Generic", marker= "1")
-	plt.scatter(l, y_saclay, s=100, color = "purple", label="Large-Nc-Glasma", marker= "*")
+	plt.axhline(y=0, color ="black", linestyle="dashed", linewidth=1.0, zorder = 1)
+	plt.scatter(l, y_trento, s=100, color = "green", label="TRENTo", marker= "x", zorder = 2)
+	plt.scatter(l, y_saclay_simple, s=100, color = "blue", label="Generic", marker= "1", zorder = 2)
+	plt.scatter(l, y_saclay, s=100, color = "purple", label="Large-Nc-Glasma", marker= "*", zorder = 2)
 	plt.xticks([1,3,5,7,9])
 	#plt.errorbar(l, y_trento, yerr = y_trento_error, linestyle = "none", elinewidth=2, capsize = 6, capthick = 2, color="green")
 	#plt.legend(loc='best')

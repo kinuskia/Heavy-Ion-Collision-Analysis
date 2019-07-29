@@ -5,6 +5,7 @@
 #include "model.hpp"
 #include "../auxiliary/fbdecomposition.hpp" // load after (!) model.hpp
 #include "../auxiliary/to_file.hpp"
+#include "../auxiliary/to_size_t.hpp"
 
 #include <ctime>
 
@@ -14,15 +15,16 @@ and two-point correlation function of an arbitrary initial-state model.
 Here, t
 */
 
-int main ()
+int main (int argc, char* argv[]) // comand-line input: centrality_min, centrality_max, # grid points
 {
 	typedef std::size_t size_type;
 	typedef double number_type;
 
 	// Set up initial-state model
 	Model<number_type> model(0.14);
-	size_type centrality_min = 10;
-	size_type centrality_max = 11;
+	size_type centrality_min = to_size_t(argv[1]);
+	size_type centrality_max = to_size_t(argv[2]);
+	size_type n_grid = to_size_t(argv[3]);
 	std::string centrality = std::to_string(centrality_min) + "-" + std::to_string(centrality_max);
 	model.initialize_W("weight_functions_"+centrality+".txt");
 
@@ -32,11 +34,11 @@ int main ()
 	decomposition.initialize();
 
 	// set number of radial grid points per dimension
-	decomposition.set_N_discret(15);
+	decomposition.set_N_discret(n_grid);
 
 
 	// Compute <e_l1^(m)e_l2^(-m)> as a function of l
-	int mMax = 1;
+	int mMax = 4;
 	int lMax = 10;
 	number_type counter = 0;
 	number_type progress_steps = 100;
@@ -46,7 +48,7 @@ int main ()
 	size_type nb_steps = (mMax+1)*lMax*lMax;
 	
 
-	for (int m = mMax; m >= 1; --m) // Remember to put m=0 again
+	for (int m = mMax; m >= 0; --m) 
 	{
 		// save result in matrix
 		gsl_matrix* result = gsl_matrix_alloc(lMax, lMax);
@@ -85,7 +87,7 @@ int main ()
 		}
 
 		// save result to text file
-		std::string filename = "output/"+centrality+"/two_point_random_connected_m_";
+		std::string filename = "output/"+centrality + "/" + std::to_string(n_grid) + "/two_point_random_connected_m_";
 		filename += std::to_string(m);
 		//filename += "_test";
 		filename += ".txt";
