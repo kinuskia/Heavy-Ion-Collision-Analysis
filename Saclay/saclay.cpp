@@ -50,6 +50,10 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 
 	for (int m = mMax; m >= 0; --m) 
 	{
+		if (m != 1) // DELETE AFTERWARDS
+		{
+			continue;
+		}
 		// save result in matrix
 		gsl_matrix* result = gsl_matrix_alloc(lMax, lMax);
 		for (int l1 = 1; l1 <= lMax; ++l1)

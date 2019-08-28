@@ -7,12 +7,12 @@ cd /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion
 g++ -std=c++11 -O2 -lgsl -o Saclay saclay.cpp
 
 
-centrality_min=0
-centrality_max=1
+centrality_min=10
+centrality_max=11
 centrality=$centrality_min"-"$centrality_max
 #n_grid=10
 
-for n_grid in 26 23 20
+for n_grid in 29
 do
 	# create necessary directories
 	mkdir -p output/$centrality/$n_grid

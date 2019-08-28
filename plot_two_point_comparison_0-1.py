@@ -68,7 +68,7 @@ for mode in modes:
 		if (current_max_CGC > maximal_value_CGC):
 			maximal_value_CGC = current_max_CGC
 		#import Large_Nc profile
-		source = 'Saclay/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay/output/'+centrality_class+'/29/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
 		current_max_Nc = max(np.amax(profile), -np.amin(profile))
 		if (current_max_Nc > maximal_value_Nc):
@@ -151,7 +151,7 @@ for mode in modes:
 for mode in modes:
 	for p in percentiles:
 		#import two-point functions
-		source = 'Saclay/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay/output/'+centrality_class+'/29/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
 
 		ax = grid[counter_fig]

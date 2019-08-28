@@ -67,7 +67,7 @@ for mode in modes:
 	filename_trento_one = 'output/one_point_0-1' +'.txt'
 
 	filename_Saclay_simple = "Saclay_simplified/output/0-1/two_point_random_connected_m_" + str(mode) + ".txt"
-	filename_Saclay = "Saclay/output/0-1/17/two_point_random_connected_m_" + str(mode) + ".txt"
+	filename_Saclay = "Saclay/output/0-1/29/two_point_random_connected_m_" + str(mode) + ".txt"
 
 	trento = np.loadtxt(filename_trento)
 	trento_error = np.loadtxt(filename_trento_error)

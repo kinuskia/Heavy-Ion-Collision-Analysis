@@ -13,7 +13,7 @@ int main ()
 	
 
 	size_type N = 500;
-	number_type r_min = 0.001;
+	number_type r_min = 0.0001;
 	number_type r_max = 2;
 	size_type centrality_min = size_type(0);
 	size_type centrality_max = size_type(1);
@@ -32,14 +32,14 @@ int main ()
 	for (size_type i = 0; i < N; ++i)
 	{
 		r[i] = r_min + (r_max-r_min)*i/N;
-		y[i] = LargeNc.TwoPoint(r[i]*cos(phi), r[i]*sin(phi), 0, 0);
+		y[i] = LargeNc.TwoPoint_test(r[i]*cos(phi), r[i]*sin(phi), 0, 0);
 	}
 
 	std::vector<std::vector<number_type>> output(2);
 	output[0] = r;
 	output[1] = y;
 
-	to_file("TwoPoint.txt", output);
+	to_file("TwoPoint_0-1.txt", output);
 
 
 
