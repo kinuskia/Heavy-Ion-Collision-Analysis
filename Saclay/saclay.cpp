@@ -15,7 +15,7 @@ and two-point correlation function of an arbitrary initial-state model.
 Here, t
 */
 
-int main (int argc, char* argv[]) // comand-line input: centrality_min, centrality_max, # grid points
+int main (int argc, char* argv[]) // comand-line input: centrality_min, centrality_max, # grid points for r-integration, # gridpoints azimuthal direction, output location
 {
 	typedef std::size_t size_type;
 	typedef double number_type;
@@ -25,6 +25,8 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 	size_type centrality_min = to_size_t(argv[1]);
 	size_type centrality_max = to_size_t(argv[2]);
 	size_type n_grid = to_size_t(argv[3]);
+	size_type n_azim = to_size_t(argv[4]);
+	std::string destination = argv[5];
 	std::string centrality = std::to_string(centrality_min) + "-" + std::to_string(centrality_max);
 	model.initialize_W("weight_functions_"+centrality+".txt");
 
@@ -35,6 +37,9 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 
 	// set number of radial grid points per dimension
 	decomposition.set_N_discret(n_grid);
+
+	// set # gridpoints for FFT
+	decomposition.set_N_discret(n_azim);
 
 
 	// Compute <e_l1^(m)e_l2^(-m)> as a function of l
@@ -50,10 +55,10 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 
 	for (int m = mMax; m >= 0; --m) 
 	{
-		if (m != 1) // DELETE AFTERWARDS
-		{
-			continue;
-		}
+		// if ((m != 4)) // DELETE AFTERWARDS
+		// {
+		// 	continue;
+		// }
 		// save result in matrix
 		gsl_matrix* result = gsl_matrix_alloc(lMax, lMax);
 		for (int l1 = 1; l1 <= lMax; ++l1)
@@ -91,7 +96,7 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 		}
 
 		// save result to text file
-		std::string filename = "output/"+centrality + "/" + std::to_string(n_grid) + "/two_point_random_connected_m_";
+		std::string filename = destination + "/two_point_random_connected_m_";
 		filename += std::to_string(m);
 		//filename += "_test";
 		filename += ".txt";

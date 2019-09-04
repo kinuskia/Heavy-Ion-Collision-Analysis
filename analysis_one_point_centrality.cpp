@@ -34,37 +34,18 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 
 	// define the respective multiplicity limits for specific centrality classes
-	std::vector<number_type> classes(22);
+	std::vector<number_type> classes(4);
 	classes[0] = 0;
 	classes[1] = 1;
-	classes[2] = 2;
-	classes[3] = 3; 
-	classes[4] = 4;
-	classes[5] = 5;
-	classes[6] = 6;
-	classes[7] = 7;
-	classes[8] = 8;
-	classes[9] = 9; 
-	classes[10] = 10;
-	classes[11] = 11;
-	classes[12] = 12;
-	classes[13] = 13;
-	classes[14] = 14; 
-	classes[15] = 15;
-	classes[16] = 16;
-	classes[17] = 17;
-	classes[18] = 18;
-	classes[19] = 19;
-	classes[20] = 20; 
-	classes[21] = 21;
+	classes[2] = 20; 
+	classes[3] = 21;
 	PbPb.get_percentiles(classes);
 
 	std::time_t current_time = std::time(nullptr);
 	std::cout << current_time-start << "s: " << "Data has been read in. \n"; 
 
-
-	// print ensemble averaged profiles
-	//PbPb.print_averaged_profiles("output/profiles_averaged");
+	PbPb.print_averaged_profiles_old("output/profiles_averaged_old");
+	
 
 	// set interpolation method: gsl_interp2d_bicubic or gsl_interp2d_bilinear
 	const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
@@ -81,6 +62,9 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	/* Fourier-decompose the profiles */
 	PbPb.decompose_azimuthal();
 	PbPb.getNormalizations();
+
+	// print ensemble averaged profiles
+	PbPb.print_averaged_profiles("output/profiles_averaged", 100);
 
 	// print <e_m(r)> for all centrality classes
 	for (size_type m = 0; m < 5; ++m)
@@ -138,7 +122,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 		//outfile_modulus += "_modulus";
 		outfile_modulus += ".txt";
 		size_type lMax = 10;
-		size_type mMax = 5;
+		size_type mMax = 10;
 
 		complex_matrix<number_type> OnePointFunction(mMax+1, lMax);
 		complex_matrix<number_type> OnePointFunction_err(mMax+1, lMax);

@@ -199,4 +199,6 @@ void read_data(std::string filename, number_type & impact_parameter, number_type
 
 }
 
+
+
 #endif

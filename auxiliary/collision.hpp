@@ -403,7 +403,7 @@ public:
 			{
 				for (size_type j = 0; j < grid_size_; ++j)
 				{
-					gsl_spline2d_set(splines_[k], z_profiles_[k], i, j, gsl_matrix_get(profiles_[k], grid_size_ -1 - i, j));
+					gsl_spline2d_set(splines_[k], z_profiles_[k], i, j, gsl_matrix_get(profiles_[k], grid_size_ -1 - j, i));
 				}
 			}
 			gsl_spline2d_init(splines_[k], x_sites_, y_sites_, z_profiles_[k], grid_size_, grid_size_);
@@ -424,6 +424,13 @@ public:
 	*/
 	void initialize_r_interpolation(const gsl_interp_type* interp_method)
 	{
+		// free xy-interpolation objects
+		for (size_type k = 0; k < multiplicities_.size(); ++k)
+		{
+			gsl_spline2d_free(splines_[k]);
+			gsl_interp_accel_free(xacc_[k]);
+			gsl_interp_accel_free(yacc_[k]);
+		}
 		size_type N = profiles_.size();
 		for (size_type k = 0; k < N; ++k)
 		{
@@ -551,6 +558,9 @@ public:
 	// Get normalization constants for each centrality class
 	void getNormalizations()
 	{
+
+		// Get normalizations for each centrality class
+
 		for (size_type c = 1; c < percentiles_.size(); ++c)
 		{
 			std::cout << normalizations_[c-1] << "\n";
@@ -569,6 +579,7 @@ public:
 					continue;
 				}
 
+				//gsl_matrix_scale(profiles_[k], 1./normalizations_[c-1]);
 				gsl_matrix_scale(m_profiles_[k], 1./normalizations_[c-1]);
 
 			}
@@ -616,8 +627,8 @@ public:
 		to_file(filename, angle_column);
 	}
 
-	// print ensemble averaged profiles
-	void print_averaged_profiles(std::string filename)
+	// print ensemble averaged profiles (old)
+	void print_averaged_profiles_old(std::string filename)
 	{
 		for (size_type c = 1; c < percentiles_.size(); ++c) // loop over centrality classes
 		{
@@ -630,6 +641,54 @@ public:
 				{
 					// add profile data to sum
 					gsl_matrix_add(sum, profiles_[k]);
+					counter++;
+				}
+				else
+				{
+					continue;
+				}
+			}
+			// divide by the number of elements to obtain average
+			gsl_matrix_scale(sum, number_type(1./counter));
+
+			// save ensemble average in text file
+			std::string outfilename = filename;
+			outfilename += "_" + std::to_string(size_type(percentiles_[c-1])) + "-" + std::to_string(size_type(percentiles_[c]));
+			outfilename += ".txt";
+			to_file(outfilename, sum);
+			gsl_matrix_free(sum);
+		}
+
+	}
+
+	// print ensemble averaged profiles
+	void print_averaged_profiles(std::string filename, size_type N)
+	{
+		for (size_type c = 1; c < percentiles_.size(); ++c) // loop over centrality classes
+		{
+			gsl_matrix* sum = gsl_matrix_alloc(N, N);
+			gsl_matrix_scale(sum, 0.0);
+			size_type counter = 0;
+			for (size_type k = 0; k < multiplicities_.size(); ++k)
+			{
+				if (is_in_centrality_class(k, c))
+				{
+					gsl_matrix* profile = gsl_matrix_alloc(N, N);
+					// fill matrix
+					for (size_type i = 0; i < N; ++i)
+					{
+						for (size_type j = 0; j < N; ++j)
+						{
+							number_type min = x_from_index(0) +grid_step_*0.01 ;
+							number_type max = x_from_index(grid_size_-1) -grid_step_*0.01 ;
+							number_type x = min + (max-min)*j/(N-1);
+							number_type y = max - (max-min)*i/(N-1);
+							gsl_matrix_set(profile, i, j, interpolate(k, x, y)/normalizations_[c-1]);
+						}
+					}
+					// add profile data to sum
+					gsl_matrix_add(sum, profile);
+					gsl_matrix_free(profile);
 					counter++;
 				}
 				else
@@ -1281,10 +1340,7 @@ public:
 			// save computed profile internally
 			m_profiles_.push_back(profile);
 
-			// free xy-interpolation objects
-			gsl_spline2d_free(splines_[k]);
-			gsl_interp_accel_free(xacc_[k]);
-			gsl_interp_accel_free(yacc_[k]);
+			
 
 		}
 
@@ -1320,6 +1376,8 @@ public:
 			W_acc_.push_back(acc);
 			gsl_spline_init(W_splines_[c-1], r_sites_, W_sites, Nr_);
 		}
+
+
 
 		// /*
 		//    Subtract background function from the Fourier-decomposed data

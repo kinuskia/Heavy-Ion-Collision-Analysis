@@ -29,16 +29,23 @@ int main (int argc, char* argv[]) // command-line input: centrality_min, central
 	std::string centrality = std::to_string(centrality_min) +  "-" + std::to_string(centrality_max);
 	model.initialize_W("weight_functions_"+centrality+".txt");
 
+	const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
+	model.initialize_OnePoint("../output/profiles_averaged_"+centrality+".txt", 100, xy_interpolation_method, 10, 0.2);
+
+	//model.print_OnePoint(10);
 
 	// Set up Fourier-Bessel decomposition object
 	// with rMax = 10 as maximal radial integration length
-	FBDecompositionSimplified<number_type> decomposition(model, 9.604);
+	FBDecompositionSimplified<number_type> decomposition(model, 9.7);
 
 	decomposition.initialize();
 
 	// Compute <e_l1^(m)e_l2^(-m)> as a function of l
 	int mMax = 4;
 	int lMax = 10;
+
+	// set reaction plane angle
+	decomposition.set_reaction_plane_angle(0);
 
 	for (int m = mMax; m >= 0; --m)
 	{
@@ -50,14 +57,14 @@ int main (int argc, char* argv[]) // command-line input: centrality_min, central
 			{
 				std::cout << "m=" << m << ", l1= " << l1 << ", l2=" << l2 << "\n";
 			
-				number_type current = decomposition.TwoMode(m, l1, -m, l2);	
+				number_type current = decomposition.TwoMode(m, l1, -m, l2, 50);	
 				gsl_matrix_set(result, l1-1, l2-1, current);
 			}
 			
 		}
 
 		// save result to text file
-		std::string filename = "output/"+ centrality +"/two_point_random_connected_m_";
+		std::string filename = "output/"+ centrality +"/two_point_connected_random_m_";
 		filename += std::to_string(m);
 		//filename += "_test";
 		filename += ".txt";
@@ -66,6 +73,14 @@ int main (int argc, char* argv[]) // command-line input: centrality_min, central
 
 		gsl_matrix_free(result);
 	}
+
+	// number_type phi = 0.29;
+	// number_type r = 9.31;
+	// number_type x = r*cos(phi);
+	// number_type y = r*sin(phi);
+	// number_type current = decomposition.TwoMode(0,1,0,1);	
+	// std::cout << "\n";
+	// std::cout << current << "\n";
 
 
 

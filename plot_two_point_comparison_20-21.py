@@ -64,13 +64,14 @@ for mode in modes:
 		if (current_max_Trento > maximal_value_Trento):
 			maximal_value_Trento = current_max_Trento
 		# import CGC simple profiles
-		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		#source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_connected_fixed' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
 		current_max_CGC = max(np.amax(profile), -np.amin(profile))
 		if (current_max_CGC > maximal_value_CGC):
 			maximal_value_CGC = current_max_CGC
 		#import Large_Nc profile
-		source = 'Saclay/output/'+centrality_class+'/29/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay/output/'+centrality_class+'/Nr29/Nm64/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
 		current_max_Nc = max(np.amax(profile), -np.amin(profile))
 		if (current_max_Nc > maximal_value_Nc):
@@ -153,7 +154,7 @@ for mode in modes:
 for mode in modes:
 	for p in percentiles:
 		#import two-point functions
-		source = 'Saclay/output/'+centrality_class+'/29/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay/output/'+centrality_class+'/Nr29/Nm64/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
 
 		ax = grid[counter_fig]
@@ -226,7 +227,8 @@ for mode in modes:
 for mode in modes:
 	for p in percentiles:
 		#import two-point functions
-		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		#source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_connected_fixed' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
 
 		ax = grid[counter_fig]

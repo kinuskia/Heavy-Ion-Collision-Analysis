@@ -65,6 +65,12 @@ public:
 		N_discret_ = N;
 	}
 
+	// setter for Nm_
+	void set_Nm_(size_type N)
+	{
+		Nm_ = N;
+	}
+
 	// integrate one-point function over phi at fixed r
 	// (only declaration, it is defined outside this class, see below)
 	number_type integ_one_phi(number_type r, number_type phi_lower, number_type phi_upper);

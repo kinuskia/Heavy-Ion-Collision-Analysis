@@ -38,6 +38,7 @@ public:
 	, normalization_(1.)
 	, Nm_(128)
 	, Nr_(50)
+	, reaction_angle_(0)
 	{
 
 	}
@@ -61,6 +62,12 @@ public:
 		return rMax_;
 	}
 
+	// setter for reaction plane angle
+	void set_reaction_plane_angle( number_type angle)
+	{
+		reaction_angle_ = angle;
+	}
+
 	// integrate one-point function over phi at fixed r
 	// (only declaration, it is defined outside this class, see below)
 	number_type integ_one_phi(number_type r, number_type phi_lower, number_type phi_upper);
@@ -76,6 +83,13 @@ public:
 	{
 		number_type x = r*cos(phi);
 		number_type y = r*sin(phi);
+		number_type x1;
+		number_type y1;
+		number_type angle = reaction_angle_;
+		x1 = x*cos(angle) + y*sin(angle);
+		y1 = (-1.)*x*sin(angle) + y*cos(angle);
+		x = x1;
+		y = y1;
 
 		return model_.OnePoint(x, y)/normalization_;
 	}
@@ -132,7 +146,7 @@ public:
 	// initialize rho(r) function
 	void initialize_rho()
 	{
-		// Compute certain grid points of W and generate a spline
+		// Compute certain grid points of rho and generate a spline
 		number_type* rho_sites;
 		number_type* r_sites;
 		rho_sites = new number_type[Nr_];
@@ -302,29 +316,40 @@ public:
 	}
 
 	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
-	number_type TwoMode(int m1, int l1, int m2, int l2)
+	number_type TwoMode(int m1, int l1, int m2, int l2, size_type N = 1)
 	{
 		get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
 		
-		number_type result;
-		std::vector<number_type> Bm(0);
-		get_B(l1, l2, m1, m2, Bm);
+		// Compute result for various reaction plane angles and average over them
+		// (trapezoidal rule)
+		number_type angle_width = 2.*pi_/N;
+		number_type result = 0;
 
-		// return real part of the result
-		int m = m1+m2;
-		if (m == 0)
+		for (size_type i = 0; i < N; ++i) // I take care of i==N during i==0 (periodic boundary conditions)
 		{
-			result = Bm[0];
-		}
-		else if (m > 0)
-		{
-			result = Bm[m];
-		}
-		else
-		{
-			result = Bm[-m];
-		}
+			set_reaction_plane_angle(angle_width*i);
+			std::vector<number_type> Bm(0);
+			get_B(l1, l2, m1, m2, Bm);
 
+			// return real part of the result
+			int m = m1+m2;
+			if (m == 0)
+			{
+				result += Bm[0];
+			}
+			else if (m > 0)
+			{
+				result += Bm[m];
+			}
+			else
+			{
+				result += Bm[-m];
+			}
+		}
+		result *= angle_width;
+
+		// "result" is now the integral from 0 to 2pi. We want the average:
+		result /= (2.*pi_);
 		return result;
 	}
 
@@ -349,6 +374,8 @@ private:
 	gsl_interp_accel* rho_acc_;
 
 	gsl_matrix* bessel_deriv_zeros_;
+
+	number_type reaction_angle_;
 };
 
 

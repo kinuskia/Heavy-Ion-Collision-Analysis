@@ -4,8 +4,13 @@
 #include <iostream>
 #include <cmath>
 
+#include <gsl/gsl_matrix.h>
+
 #include <gsl/gsl_spline.h>
 #include <gsl/gsl_sf_bessel.h>
+#include "../auxiliary/bessel_deriv_zero.hpp"
+#include "../auxiliary/read_data.hpp"
+
 
 
 #include <fstream>
@@ -93,10 +98,116 @@ public:
 		gsl_spline_init(W_spline_, r_sites, W_sites, Nr);
 	}
 
+	// import background coefficients
+	void initialize_coeffs(std::string filename, size_type mMax, size_type lMax)
+	{
+		number_type dummy;
+		gsl_matrix* data = gsl_matrix_alloc(mMax+1, lMax);
+		read_data(filename, data, dummy, dummy, dummy);
+		e_ml_ = data;
+	}
+
+	// getter for background coefficients
+	number_type e_ml(size_type m, size_type l)
+	{
+		return gsl_matrix_get(e_ml_, m, l-1);
+	}
+
+
 	// getter for W(r) function
 	number_type W(number_type r)
 	{
 		return gsl_spline_eval(W_spline_, r, W_acc_);
+	}
+
+	// integrate over W
+	number_type integrate_W_r(number_type rMin, number_type rMax, size_type N)
+	{
+		number_type result = 0;
+		number_type width = (rMax-rMin)/(N-1);
+		for (size_type i = 0; i <= N; ++i)
+		{
+			number_type r = rMin + (rMax-rMin)*i/N;
+			number_type f = W(r)*r;
+			if ( (i==0) || (i==N) )
+			{
+				result += f/2;
+			}
+			else
+			{
+				result += f;
+			}
+		}
+		result *= width;
+		return result;
+	}
+
+	// initialize rho(r) function
+	void initialize_rho()
+	{
+		number_type* rho_sites;
+		number_type* r_sites;
+		size_type Nr = 100;
+		number_type rMax = 9.604;
+
+		rho_sites = new number_type[Nr];
+		r_sites = new number_type[Nr];
+
+		for (size_type i = 0; i < Nr; ++i)
+		{
+			r_sites[i] = rMax*i/(Nr-1);
+			size_type N = 5 + 195*i/Nr;
+			rho_sites[i] = sqrt(2.*integrate_W_r(0,r_sites[i], N));
+		}
+
+		//  Generate a spline
+	
+		const gsl_interp_type* interpolator = gsl_interp_cspline;
+		gsl_spline* spline = gsl_spline_alloc(interpolator, Nr);
+		gsl_interp_accel* acc = gsl_interp_accel_alloc();
+
+		rho_interpolator_ = interpolator;
+		rho_spline_ = spline;
+		rho_acc_ = acc;
+		gsl_spline_init(rho_spline_, r_sites, rho_sites, Nr);
+	}
+
+	// getter for rho
+	number_type rho(number_type r)
+	{
+		return gsl_spline_eval(rho_spline_, r, rho_acc_);
+	}
+
+	// Compute zeros of first derivative of the Bessel function J (l'th zero crossing of J'_m)
+	void get_Bessel_deriv_zeros(size_type m, size_type l)
+	{
+		bessel_deriv_zeros_ = gsl_matrix_alloc(m, l);
+		number_type eps_rel = 1.e-15;
+		size_type max_iter = 100;
+		for (size_type i = 0; i < bessel_deriv_zeros_->size1; ++i)
+		{
+			for (size_type j = 0; j < bessel_deriv_zeros_->size2; ++j)
+			{
+				gsl_matrix_set(bessel_deriv_zeros_, i, j, find_bessel_deriv_root(i, j+1, eps_rel, max_iter));
+			}
+		}
+	}
+
+	number_type Bessel_zero(int m, size_type l)
+	{
+		if (m < 0) // take absolute value of m
+		{
+			m = -m;
+		}
+
+		return gsl_matrix_get(bessel_deriv_zeros_, m, l-1);
+		//return gsl_sf_bessel_zero_Jnu(m, l);
+	}
+
+	// Evaluate appropriate Bessel function
+	number_type Bessel(int m, size_type l, number_type r)
+	{
+		return gsl_sf_bessel_Jn(m, Bessel_zero(m, l)*rho(r));
 	}
 
 
@@ -105,8 +216,25 @@ public:
 	number_type OnePoint(number_type x, number_type y)
 	{
 		number_type r = sqrt(x*x+y*y);
-        //Here we should to the proper scale setting 
-		return W(r)/3.1415926;
+		number_type phi = atan2(y,x);
+        number_type result = W(r)/3.1415926;
+
+        size_type mMax = 10;
+        size_type lMax = 10;
+        for (size_type m=2; m<=mMax; ++m)
+        {
+        	// if (m%2 == 1)
+        	// {
+        	// 	continue;
+        	// }
+        	for (size_type l=1; l <= lMax; ++l)
+        	{
+        		result += 2.*W(r)*cos(phi*m)*Bessel(m, l, r)*e_ml(m, l);
+        	}
+        }
+
+
+		return result;
 	}
 
 	// Define connected (!) position space two-point correlation function
@@ -127,10 +255,10 @@ public:
         number_type b2= (y1+y2)/2.;
         number_type casimir= (nc*nc-1.)/2./nc;
 
-        number_type alpha_s = 0.4095;
+        number_type alpha_s = 0.4095*0+0.25;
 		number_type g = sqrt(4.*3.1415926*alpha_s);
 		number_type W0 = W(0.);
-		number_type Q0 = 1.1; //GeV
+		number_type Q0 = 1.1*0+1.24; //GeV
 		number_type scale = Q0*Q0*Q0*Q0/3./alpha_s/W0;
 		number_type Q2 = Q0*Q0*sqrt(3.1415926*OnePoint(b1,b2)/W0);
        
@@ -157,6 +285,14 @@ private:
 	const gsl_interp_type* W_interpolator_;
 	gsl_spline* W_spline_;
 	gsl_interp_accel* W_acc_;
+
+	const gsl_interp_type* rho_interpolator_;
+	gsl_spline* rho_spline_;
+	gsl_interp_accel* rho_acc_;
+
+	gsl_matrix* bessel_deriv_zeros_;
+
+	gsl_matrix* e_ml_;
 
 	//
 	number_type m_;

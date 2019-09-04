@@ -5,18 +5,18 @@ import numpy as np
 
 #modes = [0, 1, 2, 3, 4, 5]
 #modes = [0, 1]
-percentiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+percentiles = [0, 20]
 counter_fig = 0
 
-for p in range(1, len(percentiles)):
+for p in range(0, len(percentiles)):
 	counter_fig = counter_fig + 1
 	plt.figure(counter_fig)
 	plt.figure(figsize=(10,7.3))
 	plt.rcParams.update({'font.size': 23})
 	plt.rcParams['axes.titlepad'] = 10
-	source_result = 'output/one_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p])  +'.txt'
+	source_result = 'output/one_point_' + str(percentiles[p]) + '-' + str(percentiles[p]+1)  +'.txt'
 	profile = np.loadtxt(source_result)
-	source_error = 'output/one_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p]) + '_error' +'.txt'
+	source_error = 'output/one_point_' + str(percentiles[p]) + '-' + str(percentiles[p]+1) + '_error' +'.txt'
 	profile_error = np.loadtxt(source_error)
 	mMax = 4
 	lMax = 10
@@ -29,9 +29,9 @@ for p in range(1, len(percentiles)):
 	plt.xlabel("$l$")
 	plt.ylabel("$\\bar{\\epsilon}_l^{(m)}$")
 	plt.legend(loc='best')
-	centrality_class = str(percentiles[p-1]) + '-' + str(percentiles[p]) + '%'
+	centrality_class = str(percentiles[p]) + '-' + str(percentiles[p]+1) + '%'
 	plt.title("$\\bar{\\epsilon}_l^{(m)}$, "+centrality_class)
-	filename = "plots/one_point_" + str(percentiles[p-1]) + "-" + str(percentiles[p]) + ".pdf"
+	filename = "plots/one_point_" + str(percentiles[p]) + "-" + str(percentiles[p]+1) + ".pdf"
 	plt.savefig(filename, format='pdf', bbox_inches = "tight")
 	plt.close(counter_fig)
 
