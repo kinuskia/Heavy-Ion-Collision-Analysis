@@ -12,8 +12,8 @@ g++ -std=c++11 -O2 -lgsl -o SaclaySimple saclay_simplified.cpp
 # m=0.15
 # Q0=2.4
 
-centrality_min=20
-centrality_max=21
+centrality_min=0
+centrality_max=1
 # m=0.15
 # Q0=1.1
 m=0.14

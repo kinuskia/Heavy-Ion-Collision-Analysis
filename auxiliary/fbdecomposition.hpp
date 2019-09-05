@@ -36,6 +36,7 @@ public:
 	, Nm_(128)
 	, Nr_(50)
 	, N_discret_(25)
+	, reaction_angle_(0)
 	{
 
 	}
@@ -71,6 +72,12 @@ public:
 		Nm_ = N;
 	}
 
+	// setter for reaction plane angle
+	void set_reaction_plane_angle( number_type angle)
+	{
+		reaction_angle_ = angle;
+	}
+
 	// integrate one-point function over phi at fixed r
 	// (only declaration, it is defined outside this class, see below)
 	number_type integ_one_phi(number_type r, number_type phi_lower, number_type phi_upper);
@@ -86,6 +93,13 @@ public:
 	{
 		number_type x = r*cos(phi);
 		number_type y = r*sin(phi);
+		number_type x1;
+		number_type y1;
+		number_type angle = reaction_angle_;
+		x1 = x*cos(angle) + y*sin(angle);
+		y1 = (-1.)*x*sin(angle) + y*cos(angle);
+		x = x1;
+		y = y1;
 
 		return model_.OnePoint(x, y)/normalization_;
 	}
@@ -292,81 +306,94 @@ public:
 	}
 
 	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
-	number_type TwoMode(int m1, int l1, int m2, int l2)
+	number_type TwoMode(int m1, int l1, int m2, int l2, size_type N = 1)
 	{
 		get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
+		
 		//Compute FFT of a function E_l1l2^(m1m2)(phi1, phi2)
 		
-		// Step 1: Compute FFT with respect to phi1 at fixed phi2
-		// For each phi2, the FFT with m=m1 is saved in a vector
-		number_type* FFT_real;
-		number_type* FFT_imag;
-		FFT_real = new number_type[Nm_];
-		FFT_imag = new number_type[Nm_];
-		
-		// Loop over phi2
-		for (size_type j = 0; j < Nm_; ++j)
+		// Compute result for various reaction plane angles and average over them
+		// (trapezoidal rule)
+		number_type angle_width = 2.*pi_/N;
+		number_type result = 0;
+
+		for (size_type i = 0; i < N; ++i)
 		{
-			// Do FFT with respect to phi1 at fixed phi2
-			number_type phi2 = 2.* pi_ * j / Nm_;
-			number_type* fft;
-			fft = new number_type[Nm_];
+			set_reaction_plane_angle(angle_width*i);
 
-			for (size_type i = 0; i < Nm_; ++i)
-			{
-				number_type phi1 = 2. * pi_ * i / Nm_;
+			// Step 1: Compute FFT with respect to phi1 at fixed phi2
+			// For each phi2, the FFT with m=m1 is saved in a vector
+			number_type* FFT_real;
+			number_type* FFT_imag;
+			FFT_real = new number_type[Nm_];
+			FFT_imag = new number_type[Nm_];
 			
-				fft[i] = integ_r(m1, l1, m2, l2, phi1, phi2);
-				// 	if (i == 0)
-				// {
-				// 	std::cout << "m1: " << m1 << " ";
-				// 	std::cout << "l1: " << l1 << " ";
-				// 	std::cout << "m2: " << m2 << " ";
-				// 	std::cout << "l2: " << l2 << " ";
-				// 	std::cout << fft[i] << "\n";
-				// }
-			}
-
-			gsl_fft_real_radix2_transform(fft, 1, Nm_);
-
-			// save result
-			if (m1 >= 0)
+			// Loop over phi2
+			for (size_type j = 0; j < Nm_; ++j)
 			{
-				FFT_real[j] = fft[m1]/Nm_;
-				if (m1 == 0)
+				// Do FFT with respect to phi1 at fixed phi2
+				number_type phi2 = 2.* pi_ * j / Nm_;
+				number_type* fft;
+				fft = new number_type[Nm_];
+
+				for (size_type i = 0; i < Nm_; ++i)
 				{
-					FFT_imag[j] = 0;
+					number_type phi1 = 2. * pi_ * i / Nm_;
+				
+					fft[i] = integ_r(m1, l1, m2, l2, phi1, phi2);
+					// 	if (i == 0)
+					// {
+					// 	std::cout << "m1: " << m1 << " ";
+					// 	std::cout << "l1: " << l1 << " ";
+					// 	std::cout << "m2: " << m2 << " ";
+					// 	std::cout << "l2: " << l2 << " ";
+					// 	std::cout << fft[i] << "\n";
+					// }
+				}
+
+				gsl_fft_real_radix2_transform(fft, 1, Nm_);
+
+				// save result
+				if (m1 >= 0)
+				{
+					FFT_real[j] = fft[m1]/Nm_;
+					if (m1 == 0)
+					{
+						FFT_imag[j] = 0;
+					}
+					else
+					{
+						FFT_imag[j] = fft[Nm_-m1]/Nm_;
+					}
 				}
 				else
 				{
-					FFT_imag[j] = fft[Nm_-m1]/Nm_;
+					FFT_real[j] = fft[-m1]/Nm_;
+					FFT_imag[j] = -fft[Nm_+m1]/Nm_;
 				}
+			}
+
+			// Step 2: Compute FFT with respect to phi2
+			gsl_fft_real_radix2_transform(FFT_real, 1, Nm_);
+			gsl_fft_real_radix2_transform(FFT_imag, 1, Nm_);
+			
+			if (m2 == 0)
+			{
+				result += (FFT_real[m2])/Nm_;
+			}
+			else if (m2 > 0)
+			{
+				result += (FFT_real[m2] - FFT_imag[Nm_-m2])/Nm_;
 			}
 			else
 			{
-				FFT_real[j] = fft[-m1]/Nm_;
-				FFT_imag[j] = -fft[Nm_+m1]/Nm_;
+				result += (FFT_real[-m2] + FFT_imag[Nm_+m2])/Nm_;
 			}
-		}
 
-		// Step 2: Compute FFT with respect to phi2
-		gsl_fft_real_radix2_transform(FFT_real, 1, Nm_);
-		gsl_fft_real_radix2_transform(FFT_imag, 1, Nm_);
-		number_type result;
-		if (m2 == 0)
-		{
-			result = (FFT_real[m2])/Nm_;
 		}
-		else if (m2 > 0)
-		{
-			result = (FFT_real[m2] - FFT_imag[Nm_-m2])/Nm_;
-		}
-		else
-		{
-			result = (FFT_real[-m2] + FFT_imag[Nm_+m2])/Nm_;
-		}
-
-
+		result *= angle_width;
+		// "result" is now the integral from 0 to 2pi. We want the average:
+		result /= (2.*pi_);
 
 		// Step 3: Scale result with the right c_l^(m)
 		if (m1 == 0 && l1 == 1)
@@ -394,6 +421,8 @@ public:
 		{
 			result /= c(m2, l2);
 		}
+
+		
 
 		return result;
 	}
@@ -583,6 +612,8 @@ private:
 	gsl_interp_accel* rho_acc_;
 
 	gsl_matrix* bessel_deriv_zeros_;
+
+	number_type reaction_angle_;
 };
 
 

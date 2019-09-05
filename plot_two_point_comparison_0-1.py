@@ -62,7 +62,7 @@ for mode in modes:
 		if (current_max_Trento > maximal_value_Trento):
 			maximal_value_Trento = current_max_Trento
 		# import CGC simple profiles
-		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_connected_random' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
 		current_max_CGC = max(np.amax(profile), -np.amin(profile))
 		if (current_max_CGC > maximal_value_CGC):
@@ -224,14 +224,14 @@ for mode in modes:
 for mode in modes:
 	for p in percentiles:
 		#import two-point functions
-		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_connected_random' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
 
 		ax = grid[counter_fig]
 		im = ax.imshow(profile[0:(lMax),0:(lMax)], interpolation=None, cmap=plt.cm.seismic, vmin = -maximal_C, vmax = maximal_C, extent = (-0.5+1, len(profile[0,0:(lMax)])-0.5+1, len(profile[0:(lMax),0])-0.5+1, -0.5+1))
 		#centrality_class =  str(p) + '-' + str(p+1) + '%'
 		if (mode == 0):
-			ax.set_title("Generic")
+			ax.set_title("magma")
 		ax.set_xlabel("$l_2$")
 		ax.set_ylabel("$m={0}$\n$l_1$".format(mode))
 

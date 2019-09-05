@@ -27,7 +27,6 @@ int main (int argc, char* argv[]) // command-line input: centrality_min, central
 	number_type Qs0 = std::stod(argv[4]);
 	Model<number_type> model(m_IR, Qs0);
 	std::string centrality = std::to_string(centrality_min) +  "-" + std::to_string(centrality_max);
-	model.initialize_W("weight_functions_"+centrality+".txt");
 
 	const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
 	model.initialize_OnePoint("../output/profiles_averaged_"+centrality+".txt", 100, xy_interpolation_method, 10, 0.2);

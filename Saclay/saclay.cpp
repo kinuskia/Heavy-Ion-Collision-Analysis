@@ -28,7 +28,9 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 	size_type n_azim = to_size_t(argv[4]);
 	std::string destination = argv[5];
 	std::string centrality = std::to_string(centrality_min) + "-" + std::to_string(centrality_max);
-	model.initialize_W("weight_functions_"+centrality+".txt");
+	//model.initialize_W("weight_functions_"+centrality+".txt");
+	const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
+	model.initialize_OnePoint("../output/profiles_averaged_"+centrality+".txt", 100, xy_interpolation_method, 10, 0.2);
 
 	// Set up Fourier-Bessel decomposition object
 	// with rMax = 10 as maximal radial integration length
@@ -55,10 +57,10 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 
 	for (int m = mMax; m >= 0; --m) 
 	{
-		// if ((m != 4)) // DELETE AFTERWARDS
-		// {
-		// 	continue;
-		// }
+		if ((m != 2)) // DELETE AFTERWARDS
+		{
+			continue;
+		}
 		// save result in matrix
 		gsl_matrix* result = gsl_matrix_alloc(lMax, lMax);
 		for (int l1 = 1; l1 <= lMax; ++l1)
@@ -70,6 +72,12 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 				// 	gsl_matrix_set(result, l1-1, l2-1, 0.0);
 				// 	continue;
 				// }
+
+				if (l1 > l2)
+				{
+					continue;
+				}
+
 				std::cout << "m=" << m << ", l1= " << l1 << ", l2=" << l2 << "\n";
 				// Print progress
 				for (size_type i = 1; i < progress_steps; ++i)
@@ -88,15 +96,19 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 					std::cout << "Computation time in min: " << expected_duration << "\n";
 					estimate_given = true;
 				}
-				number_type current = decomposition.TwoMode(m, l1, -m, l2);	
+				number_type current = decomposition.TwoMode(m, l1, -m, l2, 6);	
 				gsl_matrix_set(result, l1-1, l2-1, current);
+
+				// make use of symmetry
+				gsl_matrix_set(result, l2-1, l1-1, current);
+
 				counter++;
 			}
 			
 		}
 
 		// save result to text file
-		std::string filename = destination + "/two_point_random_connected_m_";
+		std::string filename = destination + "/two_point_connected_random_m_";
 		filename += std::to_string(m);
 		//filename += "_test";
 		filename += ".txt";
