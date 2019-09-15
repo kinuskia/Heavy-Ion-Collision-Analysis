@@ -2,6 +2,7 @@
 *.out
 *.dat
 *.mw
+*.txt
 
 # TeX/LaTeX intermediates # 
 ########################### 
