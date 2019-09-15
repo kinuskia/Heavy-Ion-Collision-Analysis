@@ -73,6 +73,7 @@ public:
 
 
 
+
 	// Define one-point position space correlation function
 	// units in fm
 	number_type OnePoint(number_type x, number_type y)
@@ -87,6 +88,21 @@ public:
 
 		return result;
 
+	}
+
+
+	// Access current event that has been read in
+	number_type Event(Collision<number_type> Trento, size_type index, number_type x, number_type y)
+	{	
+		
+		number_type result = Trento.interpolate(index, x, y);
+		
+		if (result < 0) //easy presciption if due to rounding errors the mean value is e.g. -1.3e-15
+		{
+			result = -result;
+		}
+
+		return result;
 	}
 
 	// test method to print One-Point profile
@@ -140,7 +156,8 @@ public:
         	y = R_cutoff*sin(phi);	
         }
 
-		return 2.*pi_*hc*hc*p0*p0/Q0/Q0*pow((OnePoint(x, y)/p0),3./2)*log(Q0*Q0/m_/m_*sqrt(OnePoint(x, y)/p0));
+		//return 2.*pi_*hc*hc*p0*p0/Q0/Q0*pow((OnePoint(x, y)/p0),3./2)*log(Q0*Q0/m_/m_*sqrt(OnePoint(x, y)/p0));
+		return 2.*pi_*hc*hc*p0*p0/Q0/Q0*pow((Event(x, y)/p0),3./2)*log(Q0*Q0/m_/m_*sqrt(Event(x, y)/p0));
 		
 	}
 
@@ -152,6 +169,7 @@ private:
 	gsl_interp_accel* yacc_;
 	number_type gridmax_;
 	number_type gridstep_;
+	
 
 	//
 	number_type m_;

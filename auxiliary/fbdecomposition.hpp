@@ -115,6 +115,14 @@ public:
 		return model_.TwoPoint(x1, y1, x2, y2);
 	}
 
+	number_type TwoPoint(number_type r1, number_type r2, number_type phi)
+	{
+		number_type R = sqrt(r1*r1+r2*r2+2.*r1*r2*cos(phi));
+		number_type r = sqrt(r1*r1+r2*r2-2.*r1*r2*cos(phi));
+
+		return model_.TwoPoint(R, r);
+	}
+
 	// compute total integral of one point function = normalization
 	void DetermineNormalization()
 	{
@@ -305,6 +313,108 @@ public:
 		return result;
 	}
 
+	// my own integration routine for the r1, r2 integration for the TwoMode_fast method
+	number_type integ_r_fast(int m, int l1, int l2, number_type phi)
+	{
+		number_type result = 0;
+		size_type N = N_discret_;
+		number_type width = (rMax_-0.2)/N;
+
+		// compute integral over r1
+		// Use trapezoidal rule
+		for (size_type i = 0; i <= N; ++i) // loop over r1
+		{
+			number_type r1 = (rMax_-0.2)*i/N;
+			//std::cout << "r1: " << r1 << "\n";
+
+			// compute integral over r2 at fixed r1
+			number_type integral_r2 = 0;
+			for (size_type j = 0; j < N; ++j) // one fewer grid point and offset so that f is never evaluated at the same radius as r1
+			{
+				number_type r2 = (rMax_-0.2)*(0.5+j)/N;
+				number_type f = weight(m, l1, r1)*weight(m, l2, r2)*TwoPoint(r1, r2, phi);
+				//std::cout << "phi1: " << phi1 << " phi2: " << phi2  <<  " r2: " << r2 << " f: " << f << "\n";
+				// Use trapezoidal rule
+				if ((j == 0) || (j == (N-1)))
+				{
+					integral_r2 += f/2;
+				}
+				else
+				{
+					integral_r2 += f;
+				}
+			}
+			integral_r2 *= width;
+
+			// use integral_r2 result as input for trapezoidal rule in r1-direction
+			if ((i == 0) || (i == N))
+			{
+				result += integral_r2/2;
+			}
+			else
+			{
+				result += integral_r2;
+			}
+		}
+		result *= width;
+
+		//std::cout << result << "\n";
+
+
+		return result;
+	}
+
+	// my own integration routine for the r1, r2 integration for the TwoMode_fast method
+	number_type integ_r_mode_fast(int m, int l1, int l2)
+	{
+		number_type result = 0;
+		size_type N = N_discret_;
+		number_type width = (rMax_-0.2)/N;
+
+		// compute integral over r1
+		// Use trapezoidal rule
+		for (size_type i = 0; i <= N; ++i) // loop over r1
+		{
+			number_type r1 = (rMax_-0.2)*i/N;
+			//std::cout << "r1: " << r1 << "\n";
+
+			// compute integral over r2 at fixed r1
+			number_type integral_r2 = 0;
+			for (size_type j = 0; j <= N; ++j) 
+			{
+				number_type r2 = (rMax_-0.2)*j/N;
+				number_type f = weight(m, l1, r1)*weight(m, l2, r2)*TwoPoint_mode(m, r1, r2);
+				//std::cout << "phi1: " << phi1 << " phi2: " << phi2  <<  " r2: " << r2 << " f: " << f << "\n";
+				// Use trapezoidal rule
+				if ((j == 0) || (j == N))
+				{
+					integral_r2 += f/2;
+				}
+				else
+				{
+					integral_r2 += f;
+				}
+			}
+			integral_r2 *= width;
+
+			// use integral_r2 result as input for trapezoidal rule in r1-direction
+			if ((i == 0) || (i == N))
+			{
+				result += integral_r2/2;
+			}
+			else
+			{
+				result += integral_r2;
+			}
+		}
+		result *= width;
+
+		//std::cout << result << "\n";
+
+
+		return result;
+	}
+
 	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
 	number_type TwoMode(int m1, int l1, int m2, int l2, size_type N = 1)
 	{
@@ -387,7 +497,11 @@ public:
 			}
 			else
 			{
+				// I'm just interested in the real part (the imaginary part is zero)
 				result += (FFT_real[-m2] + FFT_imag[Nm_+m2])/Nm_;
+
+				// //imaginary part:
+				// result += (-FFT_real[Nm_+m2] + FFT_imag[-m2])/Nm_;
 			}
 
 		}
@@ -425,6 +539,156 @@ public:
 		
 
 		return result;
+	}
+
+	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
+	// using symmetries
+	number_type TwoMode_fast(int m1, int l1, int m2, int l2)
+	{
+		get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
+		
+		// m1+m2 = 0
+		if (m1 + m2 != 0)
+		{
+			return 0;
+		}
+		int m = abs(m1);
+
+		number_type result;
+
+		//Compute FFT of a function E_l1l2^(m, -m)(phi)
+		// where phi = phi1-phi2
+		
+
+		number_type* FFT;
+		FFT = new number_type[Nm_];
+
+		for (size_type i = 0; i < Nm_; ++i)
+		{
+			number_type phi = 2. * pi_ * i / Nm_;
+				
+			FFT[i] = integ_r_fast(m, l1, l2, phi);
+	
+		}
+
+		gsl_fft_real_radix2_transform(FFT, 1, Nm_);
+
+		result = FFT[m]/Nm_;
+		
+		
+
+		// Step 3: Scale result with the right c_l^(m)
+		if (m == 0 && l1 == 1)
+		{
+			result /= 0.5;
+		}
+		else if (m == 0 && l1 > 1)
+		{
+			result /= c(m, l1-1);
+		}
+		else
+		{
+			result /= c(m, l1);
+		}
+
+		if (m == 0 && l2 == 1)
+		{
+			result /= 0.5;
+		}
+		else if (m == 0 && l2 > 1)
+		{
+			result /= c(m, l2-1);
+		}
+		else
+		{
+			result /= c(m, l2);
+		}
+
+
+		if (m%2 == 1)
+		{
+			result *= -1.0;
+		}
+
+		
+
+		return result;
+	}
+
+	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
+	// using symmetries and first FFT then r-integration
+	number_type TwoMode_fast2(int m1, int l1, int m2, int l2)
+	{
+		get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
+		
+		// m1+m2 = 0
+		if (m1 + m2 != 0)
+		{
+			return 0;
+		}
+		int m = abs(m1);
+
+		number_type result;
+
+		
+		result = integ_r_mode_fast(m, l1, l2);	
+		
+		
+
+		// Scale result with the right c_l^(m)
+		if (m == 0 && l1 == 1)
+		{
+			result /= 0.5;
+		}
+		else if (m == 0 && l1 > 1)
+		{
+			result /= c(m, l1-1);
+		}
+		else
+		{
+			result /= c(m, l1);
+		}
+
+		if (m == 0 && l2 == 1)
+		{
+			result /= 0.5;
+		}
+		else if (m == 0 && l2 > 1)
+		{
+			result /= c(m, l2-1);
+		}
+		else
+		{
+			result /= c(m, l2);
+		}
+
+
+		if (m%2 == 1)
+		{
+			result *= -1.0;
+		}
+
+		return result;
+	}
+
+	// Compute FFT of TwoPoint function with respect to phi1-phi2
+	number_type TwoPoint_mode(int m, number_type r1, number_type r2)
+	{
+		assert(m >= 0);
+		number_type* FFT;
+		FFT = new number_type[Nm_];
+
+		for (size_type i = 0; i < Nm_; ++i)
+		{
+			number_type phi = 2. * pi_ * i / Nm_;	
+			FFT[i] = TwoPoint(r1, r2, phi);
+	
+		}
+
+		gsl_fft_real_radix2_transform(FFT, 1, Nm_);
+
+		return FFT[m]/Nm_;
+
 	}
 
 	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
@@ -588,6 +852,55 @@ public:
 		{
 			result = (FFT_real[-m2] + FFT_imag[Nm_+m2])/Nm_;
 		}
+
+		return result;
+	}
+
+	number_type integ_r_test(size_type N)
+	{
+		number_type result = 0;
+		number_type width = (rMax_-0.2)/N;
+
+		// compute integral over r1
+		// Use trapezoidal rule
+		for (size_type i = 0; i <= N; ++i) // loop over r1
+		{
+			number_type r1 = (rMax_-0.2)*i/N;
+			//std::cout << "r1: " << r1 << "\n";
+
+			// compute integral over r2 at fixed r1
+			number_type integral_r2 = 0;
+			for (size_type j = 0; j <= N; ++j) // one fewer grid point and offset so that f is never evaluated at the same radius as r1
+			{
+				number_type r2 = (rMax_-0.2)*j/N;
+				number_type f = 1./(1.+r1*r1)/(1.+r2*r2);
+				//std::cout << "phi1: " << phi1 << " phi2: " << phi2  <<  " r2: " << r2 << " f: " << f << "\n";
+				// Use trapezoidal rule
+				if ((j == 0) || (j == N))
+				{
+					integral_r2 += f/2;
+				}
+				else
+				{
+					integral_r2 += f;
+				}
+			}
+			integral_r2 *= width;
+
+			// use integral_r2 result as input for trapezoidal rule in r1-direction
+			if ((i == 0) || (i == N))
+			{
+				result += integral_r2/2;
+			}
+			else
+			{
+				result += integral_r2;
+			}
+		}
+		result *= width;
+
+		//std::cout << result << "\n";
+
 
 		return result;
 	}

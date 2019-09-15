@@ -4,9 +4,9 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 
 
 
-modes = [4]
-gridpoints = [29]
-Nm = [8, 16, 32, 64]
+modes = [0,1,2,3,4]
+gridpoints = [41]
+Nm = [8, 16, 32, 64, 128]
 percentiles = [20]
 
 
@@ -73,7 +73,7 @@ for i in range(0, len(gridpoints)):
 				ax = grid[counter_fig]
 				im = ax.imshow(profile[0:(lMax),0:(lMax)], interpolation=None, cmap=plt.cm.seismic, vmin = -maximal_value[j], vmax = maximal_value[j], extent = (-0.5+1, len(profile[0,0:(lMax)])-0.5+1, len(profile[0:(lMax),0])-0.5+1, -0.5+1))
 				#centrality_class =  str(p) + '-' + str(p+1) + '%'
-				if (mode == 4):
+				if (mode == 0):
 					ax.set_title("$N_m = $"+str(Nm[j]))
 				ax.set_xlabel("$l_2$")
 				ax.set_ylabel("$m={0}$\n$l_1$".format(mode))

@@ -17,7 +17,7 @@ for mode in modes:
 	ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 	ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 	plt.figure(figsize=(7,5))
-	source = 'output/0-1/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+	source = 'output/20-21/Nr41/Nm64/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 	profile = np.loadtxt(source)
 
 	
@@ -27,7 +27,7 @@ for mode in modes:
 	plt.ylabel("$l_1$")
 	plt.title("$m = $" + str(mode))
 	plt.colorbar()
-	filename = "plots/0-1/two_point_connected_random"  + "_m" + str(mode) + ".pdf"
+	filename = "plots/20-21/Nr41/Nm64/two_point_connected_random"  + "_m" + str(mode) + ".pdf"
 	plt.savefig(filename, format='pdf', bbox_inches = "tight")
 	plt.close(counter_fig)
 

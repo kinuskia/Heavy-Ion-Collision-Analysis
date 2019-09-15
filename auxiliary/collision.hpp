@@ -85,6 +85,12 @@ public:
 	}
 
 	// getter functions
+
+	size_type N_profiles() const
+	{
+		return profiles_.size();
+	}
+
 	size_type Nm() const
 	{
 		return Nm_;
@@ -751,6 +757,23 @@ public:
 			y = y1;
 		}
 		return gsl_spline2d_eval(splines_[k], x, y, xacc_[k], yacc_[k]);
+	}
+
+	// interpolation of normalized profil k
+	number_type interpolate_normalized(size_type k, size_type centrality_index, number_type x, number_type y) 
+	{
+		// consider random reaction plane angle
+		if (random_reaction_plane_)
+		{
+			number_type x1;
+			number_type y1;
+			number_type angle = angles_[k];
+			x1 = x*cos(angle) + y*sin(angle);
+			y1 = (-1.)*x*sin(angle) + y*cos(angle);
+			x = x1;
+			y = y1;
+		}
+		return gsl_spline2d_eval(splines_[k], x, y, xacc_[k], yacc_[k])/normalizations_[centrality_index-1];
 	}
 
 	// r-interpolation of m-th Fourier mode of profile k
@@ -1593,6 +1616,7 @@ public:
 	void print(size_type k) const
 	{
 		assert(k < profiles_.size());
+
 		for (size_type i = 0; i < profiles_[k]->size1; ++i)
 		{
 			for (size_type j = 0; j < profiles_[k]->size2; ++j)

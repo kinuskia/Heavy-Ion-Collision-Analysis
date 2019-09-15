@@ -10,16 +10,17 @@ g++ -std=c++11 -O2 -lgsl -o Saclay saclay.cpp
 centrality_min=20
 centrality_max=21
 centrality=$centrality_min"-"$centrality_max
+m=1e-3 #1e-7 .. 1e-2, 2e-2 2.05e-2 2.09e-2
 #n_grid=10
 
-for n_grid in 29
+for n_grid in 41
 do
 	for n_azim in 64
 	do
-		# create necessary directories
-		destination=output/$centrality/Nr$n_grid/Nm$n_azim
-		mkdir -p $destination
-		./Saclay $centrality_min $centrality_max $n_grid $n_azim $destination
+			# create necessary directories
+			destination=output/$centrality/Nr$n_grid/Nm$n_azim/m$m
+			mkdir -p $destination
+			./Saclay $centrality_min $centrality_max $n_grid $n_azim $destination $m
 	done
 done
 

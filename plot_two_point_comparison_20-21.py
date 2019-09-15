@@ -65,7 +65,7 @@ for mode in modes:
 			maximal_value_Trento = current_max_Trento
 		# import CGC simple profiles
 		#source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
-		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_connected_random' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_connected_random_trento' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
 		current_max_CGC = max(np.amax(profile), -np.amin(profile))
 		if (current_max_CGC > maximal_value_CGC):
@@ -228,7 +228,7 @@ for mode in modes:
 	for p in percentiles:
 		#import two-point functions
 		#source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
-		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_connected_random' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_connected_random_trento' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
 
 		ax = grid[counter_fig]

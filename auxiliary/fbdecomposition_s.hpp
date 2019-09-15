@@ -353,13 +353,15 @@ public:
 		return result;
 	}
 
+
 	
 	
 
 	number_type pi_;
+public:
+	Model<number_type> model_;
 
 private:
-	Model<number_type> model_;
 	number_type rMax_;
 	size_type Nr_;
 	size_type Nm_;

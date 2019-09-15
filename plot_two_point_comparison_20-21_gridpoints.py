@@ -5,12 +5,13 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 
 
 modes = [0, 1, 2, 3, 4]
-gridpoints = [8, 11, 14, 17, 20, 23, 26, 29]
+gridpoints = [8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38, 41]
 percentiles = [20]
+Nm = [128]
 
 
 # Set up figure and image grid
-fig = plt.figure(figsize=(15, 10))
+fig = plt.figure(figsize=(25, 10))
 #plt.rcParams.update({'font.size': 30})
 #plt.rcParams['axes.titlepad'] = 10
 
@@ -42,13 +43,14 @@ maximal_value = np.zeros(len(gridpoints))
 for mode in modes:
 	for p in percentiles:
 		for i in range(0, len(gridpoints)):
-			#import profiles
-			source = 'Saclay/output/'+centrality_class+'/'+ str(gridpoints[i])+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
-			profile = np.loadtxt(source)
-			current_max = max(np.amax(profile), -np.amin(profile))
-			if (current_max > maximal_value[i]):
-				maximal_value[i] = current_max
-			print(i, maximal_value[i])
+			for j in range(0, len(Nm)):
+				#import profiles
+				source = 'Saclay/output/'+centrality_class+'/Nr'+ str(gridpoints[i]) + '/Nm' + str(Nm[j]) +'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+				profile = np.loadtxt(source)
+				current_max = max(np.amax(profile), -np.amin(profile))
+				if (current_max > maximal_value[i]):
+					maximal_value[i] = current_max
+				print(i, maximal_value[i])
 		
 
 
@@ -61,28 +63,29 @@ counter_fig = 0
 
 # plot diagrams
 for i in range(0, len(gridpoints)):
-	for mode in modes:
-		for p in percentiles:
-			#import two-point functions
-			source = 'Saclay/output/'+centrality_class+'/'+ str(gridpoints[i])+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
-			profile = np.loadtxt(source)
+	for j in range(0, len(Nm)):
+		for mode in modes:
+			for p in percentiles:
+				#import two-point functions
+				source = 'Saclay/output/'+centrality_class+'/Nr'+ str(gridpoints[i]) + '/Nm' + str(Nm[j]) +'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+				profile = np.loadtxt(source)
 
-			ax = grid[counter_fig]
-			im = ax.imshow(profile[0:(lMax),0:(lMax)], interpolation=None, cmap=plt.cm.seismic, vmin = -maximal_value[i], vmax = maximal_value[i], extent = (-0.5+1, len(profile[0,0:(lMax)])-0.5+1, len(profile[0:(lMax),0])-0.5+1, -0.5+1))
-			#centrality_class =  str(p) + '-' + str(p+1) + '%'
-			if (mode == 0):
-				ax.set_title(str(gridpoints[i]))
-			ax.set_xlabel("$l_2$")
-			ax.set_ylabel("$m={0}$\n$l_1$".format(mode))
+				ax = grid[counter_fig]
+				im = ax.imshow(profile[0:(lMax),0:(lMax)], interpolation=None, cmap=plt.cm.seismic, vmin = -maximal_value[i], vmax = maximal_value[i], extent = (-0.5+1, len(profile[0,0:(lMax)])-0.5+1, len(profile[0:(lMax),0])-0.5+1, -0.5+1))
+				#centrality_class =  str(p) + '-' + str(p+1) + '%'
+				if (mode == 0):
+					ax.set_title(str(gridpoints[i]))
+				ax.set_xlabel("$l_2$")
+				ax.set_ylabel("$m={0}$\n$l_1$".format(mode))
 
-			# colorbar
-			if (mode == modes[-1]):
-				short = grid[counter_fig].cax
-				short.colorbar(im)
-				short.set_xticks([-tick[i], tick[i]])
-				short.toggle_label(True)
+				# colorbar
+				if (mode == modes[-1]):
+					short = grid[counter_fig].cax
+					short.colorbar(im)
+					short.set_xticks([-tick[i], tick[i]])
+					short.toggle_label(True)
 
-			counter_fig = counter_fig + 1
+				counter_fig = counter_fig + 1
 
 
 
