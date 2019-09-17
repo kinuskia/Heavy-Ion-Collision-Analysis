@@ -225,7 +225,12 @@ public:
 	{
 		number_type nc =3.;
         number_type hc = .1973;
-        r /= hc; 
+        r /= hc;
+
+        if (r > 6.)
+        {
+        	return 0;
+        } 
 
         // number_type R_cutoff = 0.000/hc;
         // if (r < R_cutoff)

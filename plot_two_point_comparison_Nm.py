@@ -7,7 +7,8 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 modes = [0,1,2,3,4]
 gridpoints = [41]
 Nm = [8, 16, 32, 64, 128]
-percentiles = [20]
+percentiles = [0]
+cutoff = ["1e-3"]
 
 
 # Set up figure and image grid
@@ -45,7 +46,7 @@ for mode in modes:
 		for i in range(0, len(gridpoints)):
 			for j in range(0, len(Nm)):
 				#import profiles
-				source = 'Saclay/output/'+centrality_class+'/Nr'+ str(gridpoints[i]) + '/Nm' + str(Nm[j]) +'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+				source = 'Saclay/output/'+centrality_class+'/Nr'+ str(gridpoints[i]) + '/Nm' + str(Nm[j]) +'/m' + str(cutoff[i]) +'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 				profile = np.loadtxt(source)
 				current_max = max(np.amax(profile), -np.amin(profile))
 				if (current_max > maximal_value[j]):
@@ -67,7 +68,7 @@ for i in range(0, len(gridpoints)):
 		for mode in modes:
 			for p in percentiles:
 				#import two-point functions
-				source = 'Saclay/output/'+centrality_class+'/Nr'+ str(gridpoints[i]) + '/Nm' + str(Nm[j]) +'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+				source = 'Saclay/output/'+centrality_class+'/Nr'+ str(gridpoints[i]) + '/Nm' + str(Nm[j]) +'/m' + str(cutoff[i]) +'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 				profile = np.loadtxt(source)
 
 				ax = grid[counter_fig]

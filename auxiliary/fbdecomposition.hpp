@@ -365,24 +365,25 @@ public:
 	}
 
 	// my own integration routine for the r1, r2 integration for the TwoMode_fast method
-	number_type integ_r_mode_fast(int m, int l1, int l2)
+	number_type integ_r_mode_fast(int m, int l1, int l2, number_type r_max = (9.604-0.2))
 	{
 		number_type result = 0;
 		size_type N = N_discret_;
-		number_type width = (rMax_-0.2)/N;
+		number_type rMax = r_max;
+		number_type width = (rMax)/N;
 
 		// compute integral over r1
 		// Use trapezoidal rule
 		for (size_type i = 0; i <= N; ++i) // loop over r1
 		{
-			number_type r1 = (rMax_-0.2)*i/N;
+			number_type r1 = rMax*i/N;
 			//std::cout << "r1: " << r1 << "\n";
 
 			// compute integral over r2 at fixed r1
 			number_type integral_r2 = 0;
 			for (size_type j = 0; j <= N; ++j) 
 			{
-				number_type r2 = (rMax_-0.2)*j/N;
+				number_type r2 = rMax*j/N;
 				number_type f = weight(m, l1, r1)*weight(m, l2, r2)*TwoPoint_mode(m, r1, r2);
 				//std::cout << "phi1: " << phi1 << " phi2: " << phi2  <<  " r2: " << r2 << " f: " << f << "\n";
 				// Use trapezoidal rule

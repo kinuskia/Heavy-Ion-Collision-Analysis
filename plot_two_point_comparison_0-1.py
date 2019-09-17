@@ -62,14 +62,34 @@ for mode in modes:
 		if (current_max_Trento > maximal_value_Trento):
 			maximal_value_Trento = current_max_Trento
 		# import CGC simple profiles
-		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_connected_random' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
+		# add geometry part
+		source_one_point = 'output/one_point_'+centrality_class+'.txt'
+		one_points = np.loadtxt(source_one_point)
+		for i in range(0, lMax):
+			for j in range(0, lMax):
+				if ((i==0)&(j==0)&(mode==0)):
+					profile[i][j] += 1./np.pi/np.pi*(s2_N/N/N-1./N)
+				else:
+					profile[i][j] += (1.-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
+					
 		current_max_CGC = max(np.amax(profile), -np.amin(profile))
 		if (current_max_CGC > maximal_value_CGC):
 			maximal_value_CGC = current_max_CGC
 		#import Large_Nc profile
-		source = 'Saclay/output/'+centrality_class+'/Nr29/Nm64/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m1e-3/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
+		# add geometry part
+		source_one_point = 'output/one_point_'+centrality_class+'.txt'
+		one_points = np.loadtxt(source_one_point)
+		for i in range(0, lMax):
+			for j in range(0, lMax):
+				if ((i==0)&(j==0)&(mode==0)):
+					profile[i][j] += 1./np.pi/np.pi*(s2_N/N/N-1./N)
+				else:
+					profile[i][j] += (1.-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
+
 		current_max_Nc = max(np.amax(profile), -np.amin(profile))
 		if (current_max_Nc > maximal_value_Nc):
 			maximal_value_Nc = current_max_Nc
@@ -95,7 +115,7 @@ for mode in modes:
 				elif ((i == j)):
 					profile[i][j] = (-1.0)**mode/2./np.pi**2/N/clm[i, mode]*(1.+s2_w) + (1-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
 				else:
-					profile[i][j] = (1-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
+					profile[i][j] = (1.-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
 		current_max_IPSM = max(np.amax(profile), -np.amin(profile))
 		if (current_max_IPSM > maximal_value_IPSM):
 			maximal_value_IPSM = current_max_IPSM
@@ -151,8 +171,17 @@ for mode in modes:
 for mode in modes:
 	for p in percentiles:
 		#import two-point functions
-		source = 'Saclay/output/'+centrality_class+'/Nr29/Nm64/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m1e-3/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
+		# add geometry part
+		source_one_point = 'output/one_point_'+centrality_class+'.txt'
+		one_points = np.loadtxt(source_one_point)
+		for i in range(0, lMax):
+			for j in range(0, lMax):
+				if ((i==0)&(j==0)&(mode==0)):
+					profile[i][j] += 1./np.pi/np.pi*(s2_N/N/N-1./N)
+				else:
+					profile[i][j] += (1.-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
 
 		ax = grid[counter_fig]
 		im = ax.imshow(profile[0:(lMax),0:(lMax)], interpolation=None, cmap=plt.cm.seismic, vmin = -maximal_N, vmax = maximal_N, extent = (-0.5+1, len(profile[0,0:(lMax)])-0.5+1, len(profile[0:(lMax),0])-0.5+1, -0.5+1))
@@ -199,7 +228,7 @@ for mode in modes:
 				elif ((i == j)):
 					profile[i][j] = (-1.0)**mode/2./np.pi**2/N/clm[i, mode]*(1.+s2_w) + (1-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
 				else:
-					profile[i][j] = (1-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
+					profile[i][j] = (1.-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
 
 
 		ax = grid[counter_fig]
@@ -224,8 +253,17 @@ for mode in modes:
 for mode in modes:
 	for p in percentiles:
 		#import two-point functions
-		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_connected_random' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 		profile = np.loadtxt(source)
+		# add geometry part
+		source_one_point = 'output/one_point_'+centrality_class+'.txt'
+		one_points = np.loadtxt(source_one_point)
+		for i in range(0, lMax):
+			for j in range(0, lMax):
+				if ((i==0)&(j==0)&(mode==0)):
+					profile[i][j] += 1./np.pi/np.pi*(s2_N/N/N-1./N)
+				else:
+					profile[i][j] += (1.-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
 
 		ax = grid[counter_fig]
 		im = ax.imshow(profile[0:(lMax),0:(lMax)], interpolation=None, cmap=plt.cm.seismic, vmin = -maximal_C, vmax = maximal_C, extent = (-0.5+1, len(profile[0,0:(lMax)])-0.5+1, len(profile[0:(lMax),0])-0.5+1, -0.5+1))

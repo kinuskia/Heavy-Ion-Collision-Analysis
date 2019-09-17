@@ -66,14 +66,26 @@ for mode in modes:
 	# filename_trento_error = "output/two_point_random_0-1_m" + str(mode) + "_real_error.txt"
 	# filename_trento_one = 'output/one_point_0-1' +'.txt'
 
-	filename_Saclay_simple = "Saclay_simplified/output/20-21/two_point_connected_random_m_" + str(mode) + ".txt"
-	filename_Saclay = "Saclay/output/20-21/Nr29/Nm64/two_point_connected_random_m_" + str(mode) + ".txt"
+	filename_Saclay_simple = "Saclay_simplified/output/20-21/two_point_random_connected_m_" + str(mode) + ".txt"
+	filename_Saclay = "Saclay/output/20-21/Nr41/Nm64/m1e-3/two_point_random_connected_m_" + str(mode) + ".txt"
 
 	trento = np.loadtxt(filename_trento)
 	trento_error = np.loadtxt(filename_trento_error)
 	trento_one_ml = np.loadtxt(filename_trento_one)
 	saclay_simple = np.loadtxt(filename_Saclay_simple)
 	saclay = np.loadtxt(filename_Saclay)
+	# add geometry part
+	source_one_point = 'output/one_point_20-21.txt'
+	one_points = np.loadtxt(source_one_point)
+	for i in range(0, lMax):
+		for j in range(0, lMax):
+			if ((i==0)&(j==0)&(mode==0)):
+				saclay_simple[i][j] += 1./np.pi/np.pi*(s2_N/N/N-1./N)
+				saclay[i][j] += 1./np.pi/np.pi*(s2_N/N/N-1./N)
+			else:
+				saclay_simple[i][j] += (1.-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
+				saclay[i][j] += (1.-1./N+s2_N/N/N)*one_points[mode, i]*one_points[mode, j]
+
 	y_saclay_simple = np.zeros(lMax)
 	y_saclay = np.zeros(lMax)
 	y_trento = np.zeros(lMax)

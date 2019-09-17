@@ -6,7 +6,7 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 
 modes = [0, 1, 2, 3, 4]
 gridpoints = [8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38, 41]
-percentiles = [20]
+percentiles = [0]
 Nm = [128]
 cutoff = ["1e-3"]
 

@@ -79,10 +79,10 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 				// 	continue;
 				// }
 
-				if (l1 > l2)
-				{
-					continue;
-				}
+				// if (l1 > l2)
+				// {
+				// 	continue;
+				// }
 
 				std::cout << "m=" << m << ", l1= " << l1 << ", l2=" << l2 << "\n";
 				// Print progress
@@ -105,8 +105,8 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 				number_type current = decomposition.TwoMode_fast2(m, l1, -m, l2);	
 				gsl_matrix_set(result, l1-1, l2-1, current);
 
-				// make use of symmetry
-				gsl_matrix_set(result, l2-1, l1-1, current);
+				// // make use of symmetry
+				// gsl_matrix_set(result, l2-1, l1-1, current);
 
 				counter++;
 			}
