@@ -4,7 +4,7 @@ import numpy as np
 modes = [0, 1, 2, 3, 4]
 #modes = [0, 1]
 #percentiles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
-percentiles = [0, 20, 21]
+percentiles = np.arange(100)
 counter_fig = 0
 
 # # modulus plots
@@ -47,10 +47,10 @@ counter_fig = 0
 # 		plt.savefig(filename, format='pdf', bbox_inches = "tight")
 # 		plt.close(counter_fig)
 
-lMax = 6
+lMax = 10
 # connected diagrams
 for mode in modes:
-	for p in range(1, len(percentiles)):
+	for p in range(0, len(percentiles)):
 		counter_fig = counter_fig + 1
 		plt.figure(counter_fig)
 		plt.rcParams.update({'font.size': 30})
@@ -59,11 +59,11 @@ for mode in modes:
 		ax = plt.figure().gca()
 		ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 		ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-		plt.figure(figsize=(7,5))
-		source = 'output/two_point_random_' + str(percentiles[p-1]) + '-' + str(percentiles[p-1]+1) + '_m' + str(mode) + '_real' +'.txt'
+		#plt.figure(figsize=(7,5))
+		source = 'output/two_point_random_' + str(percentiles[p]) + '-' + str(percentiles[p]+1) + '_m' + str(mode) + '_real' +'.txt'
 		profile = np.loadtxt(source)
 		# import one-point functions
-		source_one = 'output/one_point_' + str(percentiles[p-1]) + '-' + str(percentiles[p-1]+1)  +'.txt'
+		source_one = 'output/one_point_' + str(percentiles[p]) + '-' + str(percentiles[p]+1)  +'.txt'
 		profile_one_ml = np.loadtxt(source_one)
 		# subtract unconnected parts from correlation function
 		# for i in range(0, len(profile[0:, 0])):
@@ -75,14 +75,14 @@ for mode in modes:
 			profile[0,0] -= profile_one_ml[mode, 0] * profile_one_ml[mode, 0]
 		
 		maximal_value = max(np.amax(profile), -np.amin(profile))
-		plt.imshow(profile[0:(lMax),0:(lMax)], interpolation=None, cmap=plt.cm.RdYlGn,vmin = -maximal_value, vmax = maximal_value, extent = (-0.5+1, len(profile[0,0:(lMax)])-0.5+1, len(profile[0:(lMax),0])-0.5+1, -0.5+1))
+		plt.imshow(profile[0:(lMax),0:(lMax)], interpolation=None, cmap=plt.cm.seismic,vmin = -maximal_value, vmax = maximal_value, extent = (-0.5+1, len(profile[0,0:(lMax)])-0.5+1, len(profile[0:(lMax),0])-0.5+1, -0.5+1))
 		plt.xlabel("$l_2$")
 		plt.ylabel("$l_1$")
-		centrality_class =  str(percentiles[p-1]) + '-' + str(percentiles[p-1]+1) + '%'
+		centrality_class =  str(percentiles[p]) + '-' + str(percentiles[p]+1) + '%'
 		#plt.title("$\\left\\langle\\epsilon^{(" + str(mode) + ")}_{l_1} \\epsilon^{(" + str(-mode) + ")}_{l_2}\\right\\rangle_{\\circ, c}$, "+centrality_class)
 		plt.title("$m = $" + str(mode) + ", "+centrality_class)
 		plt.colorbar()
-		filename = "plots/two_point_real_connected_random_" + str(percentiles[p-1]) + "-" + str(percentiles[p-1]+1) + "_m" + str(mode) + ".pdf"
+		filename = "plots/two_point_real_connected_random_" + str(percentiles[p]) + "-" + str(percentiles[p]+1) + "_m" + str(mode) + ".pdf"
 		plt.savefig(filename, format='pdf', bbox_inches = "tight")
 		plt.close(counter_fig)
 

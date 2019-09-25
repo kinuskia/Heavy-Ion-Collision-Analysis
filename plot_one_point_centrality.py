@@ -5,8 +5,11 @@ import numpy as np
 
 #modes = [0, 1, 2, 3, 4, 5]
 #modes = [0, 1]
-percentiles = [0, 20]
+percentiles = np.arange(100)
 counter_fig = 0
+
+colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+
 
 for p in range(0, len(percentiles)):
 	counter_fig = counter_fig + 1
@@ -24,8 +27,9 @@ for p in range(0, len(percentiles)):
 	for i in range(0, lMax):
 		l[i] = i+1
 	for m in range(0, mMax+1):
-		plt.errorbar(l, profile[m, 0:], yerr=profile_error[m,0:], linestyle = 'none', elinewidth=2, capsize = 6, capthick = 2, label = "$m="+str(m)+"$")
-		plt.scatter(l, profile[m, 0:], s=10)
+		plt.errorbar(l, profile[m, 0:], yerr=profile_error[m,0:], linestyle = 'none', elinewidth=2, capsize = 6, capthick = 2, color=colors[m])
+		plt.scatter(l, profile[m, 0:], s=10, color=colors[m])
+		plt.plot(l, profile[m, 0:], color=colors[m], label = "$m="+str(m)+"$")
 	plt.xlabel("$l$")
 	plt.ylabel("$\\bar{\\epsilon}_l^{(m)}$")
 	plt.legend(loc='best')

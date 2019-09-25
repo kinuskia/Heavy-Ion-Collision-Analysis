@@ -26,7 +26,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	//PbPb.normalize(1); // normalize events so that integral = 1
 
 
-	PbPb.centralize(); // shift data so that barycentre at origin
+	//PbPb.centralize(); // shift data so that barycentre at origin
 
 	PbPb.getReactionPlane("output/angles.txt"); // compute reaction plane angles
 
@@ -34,12 +34,16 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 
 	// define the respective multiplicity limits for specific centrality classes
-	std::vector<number_type> classes(4);
-	classes[0] = 0;
-	classes[1] = 1;
-	classes[2] = 20; 
-	classes[3] = 21;
+	std::vector<number_type> classes(101);
+	for (size_type i = 0; i < classes.size(); ++i)
+	{
+		classes[i] = i; // centrality classes from 0 to 100 in 1% intervals
+	}
+
+
 	PbPb.get_percentiles(classes);
+
+	PbPb.centralize_centrality();
 
 	std::time_t current_time = std::time(nullptr);
 	std::cout << current_time-start << "s: " << "Data has been read in. \n"; 

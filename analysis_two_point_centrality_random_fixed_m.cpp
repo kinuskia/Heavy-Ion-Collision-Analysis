@@ -29,7 +29,16 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	//PbPb.normalize(1); // normalize events so that integral = 1
 
 
-	PbPb.centralize(); // shift data so that barycentre at origin
+	//PbPb.centralize(); // shift data so that barycentre at origin
+
+	// compute the respective multiplicity limits for specific centrality classes
+	std::vector<number_type> classes(101);
+	for (size_type i = 0; i < classes.size(); ++i)
+	{
+		classes[i] = i; // centrality classes from 0 to 100 in 1% intervals
+	}
+	PbPb.get_percentiles(classes);
+	PbPb.centralize_centrality();
 
 	//set interpolation method: gsl_interp2d_bicubic or gsl_interp2d_bilinear
 	const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
@@ -43,31 +52,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	// Print file with the following columns: impact parameter, number of participants, multiplicity
 	PbPb.collision_specs_to_file("output/collision_specs.txt");
 
-	// compute the respective multiplicity limits for specific centrality classes
-	std::vector<number_type> classes(22);
-	classes[0] = 0;
-	classes[1] = 1;
-	classes[2] = 2;
-	classes[3] = 3; 
-	classes[4] = 4;
-	classes[5] = 5;
-	classes[6] = 6;
-	classes[7] = 7;
-	classes[8] = 8;
-	classes[9] = 9; 
-	classes[10] = 10;
-	classes[11] = 11;
-	classes[12] = 12;
-	classes[13] = 13;
-	classes[14] = 14; 
-	classes[15] = 15;
-	classes[16] = 16;
-	classes[17] = 17;
-	classes[18] = 18;
-	classes[19] = 19;
-	classes[20] = 20; 
-	classes[21] = 21;
-	PbPb.get_percentiles(classes);
+	
 
 
 	//compute two-point correlation functions for each centrality class

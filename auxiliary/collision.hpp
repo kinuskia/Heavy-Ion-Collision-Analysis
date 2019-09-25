@@ -106,14 +106,38 @@ public:
 		}
 	}
 
+	// function that returns number of digits of a number
+	size_type get_n_digits(size_type k) const
+	{
+		size_type N = 1;
+		if (k < N)
+		{
+			return 1;
+		}
+
+		for (size_type exponent = 1; exponent < 10; ++exponent)
+		{
+			N *= 10;
+			if (k < N)
+			{
+				return exponent;
+			}
+		}
+
+		return 0;
+
+	}
+
+
 	// function to generate the filename of data file k
 	std::string get_filename(std::string filename_begin, std::string fileformat, size_type k, size_type n_files)
 	{
 		std::string filename = filename_begin;
 		
 		// Step 1: Determine the number of digits to display string number
-		size_type n_digits = log(1.0*(n_files-1))/log(10.) + 1;
-		
+		size_type n_digits = get_n_digits(n_files-1);
+
+
 		// Step 2: Determine the number of leading zeros needed
 		size_type n_digits_index;
 		if (k == 0)
@@ -122,8 +146,9 @@ public:
 		}
 		else
 		{
-			n_digits_index = log(1.0*k)/log(10.) + 1;
+			n_digits_index = get_n_digits(k);
 		}
+
 		size_type leading_zeros = n_digits - n_digits_index;
 		
 		// Step 3: Create file name
@@ -170,7 +195,7 @@ public:
 					{
 						number_type density = gsl_matrix_get(data, i, j);
 						density = pow(density, exponent);
-						gsl_matrix_set(data, i, j, density);	
+						gsl_matrix_set(data, i, j, density);
 					}
 				}
 				profiles_.push_back(data);
@@ -233,7 +258,7 @@ public:
 	}
 
 	// compute histogram data points of multiplicity samples
-	void histogram_mult(std::string filename, size_type N_bins, bool normed)
+	void histogram_mult(std::string filename, size_type N_bins, std::vector<number_type> & x, std::vector<number_type> &y, std::vector<number_type> &dy, bool normed)
 	{
 		// create edges and bin vector
 		std::vector<std::size_t> frequencies(N_bins, 0);
@@ -263,9 +288,9 @@ public:
 		}
 
 		// save to text file
-		std::vector<number_type> x(N_bins);
-		std::vector<number_type> y(N_bins);
-		std::vector<number_type> dy(N_bins);
+		assert(x.size() == y.size());
+		assert(y.size() == dy.size());
+		assert(dy.size() == N_bins);
 		for (size_type i = 0; i < x.size(); ++i)
 		{
 			x[i] = (edges[i+1]+edges[i])/2;
@@ -559,6 +584,94 @@ public:
 			}
 			gsl_matrix_free(m_copy);
 		}
+	}
+
+	// Shift matrix data (barycenter at N/2,N/2) such that average field of a given centrality class is centered around the origin
+	void centralize_centrality()
+	{
+		// for each centrality class: identify the mean barycentre and shift profiles accordingly
+		for (size_type c = 1; c < percentiles_.size(); ++c)
+		{
+			number_type x_bary_mean = 0; 
+			number_type y_bary_mean = 0;
+			size_type counter = 0;
+
+			for (size_type k = 0; k < profiles_.size(); ++k) // average over events of a given centrality class
+			{
+				if (!is_in_centrality_class(k, c))
+				{
+					continue;
+				}
+				// COMPUTE BARYCENTRE
+				number_type x_bary = 0;
+				number_type y_bary = 0;
+				number_type integral = integrated_density(k);
+				
+				for (size_type i = 0; i < profiles_[k]->size1; ++i)
+				{
+					for (size_type j = 0; j < profiles_[k]->size2; ++j)
+					{
+						number_type x = j;
+						number_type y = i;
+						x_bary += gsl_matrix_get(profiles_[k], i, j)*x/integral;
+						y_bary += gsl_matrix_get(profiles_[k], i, j)*y/integral;
+					}
+				}
+				x_bary *= grid_step_*grid_step_;
+				y_bary *= grid_step_*grid_step_;
+
+				
+
+
+				x_bary_mean += x_bary;
+				y_bary_mean += y_bary;
+				counter++;
+			}
+
+			x_bary_mean /= counter;
+			y_bary_mean /= counter;
+
+			//std::cout << c << " : " << x_bary_mean << " , " << y_bary_mean << "\n";
+
+
+			// SHIFT
+
+			for (size_type k = 0; k < profiles_.size(); ++k)
+			{
+				if (!is_in_centrality_class(k, c))
+				{
+					continue;
+				}
+
+				// make temporary copy
+				gsl_matrix* m_copy = gsl_matrix_alloc(profiles_[k]->size1, profiles_[k]->size2);
+				gsl_matrix_memcpy(m_copy, profiles_[k]);
+
+				// center the barycentre
+				int dx = round((1.0*m_copy->size2-1)/2-x_bary_mean);
+				int dy = round((1.0*m_copy->size1-1)/2-y_bary_mean);
+				//std::cout << "x: " << xB << " y: " << yB << "\n";
+			
+				for (int i = 0; i < m_copy->size1; ++i)
+				{
+					for (int j = 0; j < m_copy->size2; ++j)
+					{	
+						// deal with out-of bound indices
+						if (i-dy < 0 || j-dx < 0 || i-dy >= m_copy->size2 || j-dx >= m_copy->size1)
+						{
+							gsl_matrix_set(profiles_[k], i, j, 0.);
+						}
+						else
+						{
+							gsl_matrix_set(profiles_[k], i, j, gsl_matrix_get(m_copy, i-dy, j-dx));
+						}
+					}
+				}
+				gsl_matrix_free(m_copy);
+			}
+
+		}
+	
 	}
 
 	// Get normalization constants for each centrality class
