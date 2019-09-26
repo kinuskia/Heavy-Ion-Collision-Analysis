@@ -3,9 +3,17 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 
 percentiles = np.array([0, 20])
-N_values = np.array([223, 436])
+# Read in IPSM fit result
+N_values = np.zeros(len(percentiles))
 s2_N_values = np.zeros(len(percentiles))
-s2_w_values = np.array([0.633, 2.18])
+s2_w_values = np.zeros(len(percentiles))
+
+for k in range(0, len(percentiles)):
+	centrality_class =  str(percentiles[k]) + '-' + str(percentiles[k]+1)
+	filename_fit = "../IPSM-Fit_One/output/" + centrality_class + ".txt"
+	N_value = np.loadtxt(filename_fit, unpack=True)
+	N_values[k] = N_value
+	s2_w_values[k] = 0
 
 for pp in range(0, len(percentiles)):
 	p = percentiles[pp]

@@ -1580,14 +1580,52 @@ public:
 		to_file(filename, Ws);
 	}
 
-	// generate output file with values of W(r) for each centrality class
-	void print_W(std::string filename_begin)
-	{
-		// Ws structure: radius, W (sorted by central. class)
-		std::vector<gsl_vector*> Ws(percentiles_.size());
-		// dWs structure: radius, dW (sorted by central. class)
-		std::vector<gsl_vector*> dWs(percentiles_.size());
+	// // generate output file with values of W(r) for each centrality class
+	// void print_W(std::string filename_begin)
+	// {
+	// 	// Ws structure: radius, W (sorted by central. class)
+	// 	std::vector<gsl_vector*> Ws(percentiles_.size());
+	// 	// dWs structure: radius, dW (sorted by central. class)
+	// 	std::vector<gsl_vector*> dWs(percentiles_.size());
 
+	// 	for (size_type c = 1; c < percentiles_.size(); ++c) // loop over centrality classes
+	// 	{
+	// 		// Compute <e_0>
+	// 		gsl_vector* radii = gsl_vector_alloc(Nr_);
+	// 		gsl_vector* e_mean = gsl_vector_alloc(Nr_);
+	// 		gsl_vector* e_err = gsl_vector_alloc(Nr_);
+
+	// 		average_fourier(0, c, radii, e_mean, e_err);
+
+
+	// 		// Scale them to get W(r)
+	// 		gsl_vector_scale(e_mean, 3.1415926);
+	// 		gsl_vector_scale(e_err, 3.1415926);
+
+
+	// 		// Save the at the correct position of Ws
+	// 		if (c == 1)
+	// 		{
+	// 			Ws[0] = radii;
+	// 			dWs[0] = radii;
+	// 		}
+
+
+	// 		Ws[c] = e_mean;
+	// 		dWs[c] = e_err;
+
+	// 	}
+
+	// 	// Save files
+
+	// 	to_file(filename_begin + ".txt" , Ws);
+	// 	to_file(filename_begin + "_error" + ".txt" , dWs);
+		
+	// }
+
+	// generate output file with values of W(r) for each centrality class
+	void print_W(std::string filename_begin, bool error_column = true)
+	{
 		for (size_type c = 1; c < percentiles_.size(); ++c) // loop over centrality classes
 		{
 			// Compute <e_0>
@@ -1602,24 +1640,21 @@ public:
 			gsl_vector_scale(e_mean, 3.1415926);
 			gsl_vector_scale(e_err, 3.1415926);
 
+			// Save to text file
+			std::string outfilename = filename_begin;
+			outfilename += "_" + std::to_string(size_type(percentiles_[c-1])) + "-" + std::to_string(size_type(percentiles_[c]));
+			outfilename += ".txt";
 
-			// Save the at the correct position of Ws
-			if (c == 1)
+			if (error_column) // print with or without error
 			{
-				Ws[0] = radii;
-				dWs[0] = radii;
+				to_file(outfilename, radii, e_mean, e_err);
+			}
+			else
+			{
+				to_file(outfilename, radii, e_mean);
 			}
 
-
-			Ws[c] = e_mean;
-			dWs[c] = e_err;
-
 		}
-
-		// Save files
-
-		to_file(filename_begin + ".txt" , Ws);
-		to_file(filename_begin + "_error" + ".txt" , dWs);
 		
 	}
 

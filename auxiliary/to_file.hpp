@@ -44,6 +44,17 @@ void to_file(std::string filename, gsl_vector* r, gsl_vector* E, gsl_vector* dE)
 	columns.push_back(dE);
 	to_file(filename, columns);
 }
+
+// overloaded function for the special case of two columns
+void to_file(std::string filename, gsl_vector* r, gsl_vector* E)
+{
+	typedef double number_type;
+	std::vector<gsl_vector*> columns(0);
+	columns.push_back(r);
+	columns.push_back(E);
+	to_file(filename, columns);
+}
+
 // overload for STL vectors
 template<typename number_type>
 void to_file(std::string filename, std::vector<std::vector<number_type>> data_columns)
