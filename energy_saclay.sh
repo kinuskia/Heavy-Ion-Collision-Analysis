@@ -7,23 +7,26 @@ cd /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion
 g++ -std=c++11 -O2 -lgsl -o Saclay saclay.cpp
 
 
-centrality_min=20
-centrality_max=21
-centrality=$centrality_min"-"$centrality_max
-m=1e-5 #1e-7 .. 1e-2, 2e-2 2.05e-2 2.09e-2
+#centrality_min=20
+#centrality_max=21
+m=1.4e-1 #1e-7 .. 1e-2, 2e-2 2.05e-2 2.09e-2
 #n_grid=10
 
-for n_grid in 41
+for centrality_min in $(seq 0 99)
 do
-	for n_azim in 64
+	centrality_max=$((centrality_min+1))
+	centrality=$centrality_min"-"$centrality_max
+	for n_grid in 41
 	do
-			# create necessary directories
-			destination=output/$centrality/Nr$n_grid/Nm$n_azim/m$m
-			mkdir -p $destination
-			./Saclay $centrality_min $centrality_max $n_grid $n_azim $destination $m
+		for n_azim in 64
+		do
+				# create necessary directories
+				destination=output/$centrality/Nr$n_grid/Nm$n_azim/m$m
+				mkdir -p $destination
+				./Saclay $centrality_min $centrality_max $n_grid $n_azim $destination $m
+		done
 	done
 done
-
 
 
 # Plot result

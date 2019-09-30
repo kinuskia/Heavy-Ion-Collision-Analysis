@@ -31,7 +31,7 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 
 	// Set up initial-state model
 	Model<number_type> model(m_IR);
-	model.initialize_W("weight_functions_"+centrality+".txt");
+	model.initialize_W("../output/weight_functions_"+centrality+".txt");
 	// const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
 	// model.initialize_OnePoint("../output/profiles_averaged_"+centrality+".txt", 100, xy_interpolation_method, 10, 0.2);
 

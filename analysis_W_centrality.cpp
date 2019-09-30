@@ -28,10 +28,11 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 
 	// define the respective multiplicity limits for specific centrality classes
-	std::vector<number_type> classes(3);
-	classes[0] = 0;
-	classes[1] = 1;
-	classes[2] = 2;
+	std::vector<number_type> classes(101);
+	for (size_type i = 0; i < classes.size(); ++i)
+	{
+		classes[i] = i; // centrality classes from 0 to 100 in 1% intervals
+	}
 	PbPb.get_percentiles(classes);
 
 	std::time_t current_time = std::time(nullptr);
