@@ -2,17 +2,16 @@ import matplotlib.pyplot as plt
 import numpy as np 
 
 #percentiles = np.arange(21)
-percentiles = np.array([0, 20])
-modes = [0,1,2,3,4]
-colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+percentiles = np.array([0,20])
 
-figs, axs = plt.subplots(len(modes), len(percentiles), figsize=(8.0,7.5),sharex="col", sharey="row")
+
 for pp in range(0, len(percentiles)):
 	p = percentiles[pp]
 
 
-	
+	modes = [0, 1, 2, 3, 4]
 	#modes = [0, 1]
+	counter_fig = 0
 
 	centrality_class =  str(p) + '-' + str(p+1)
 
@@ -23,17 +22,16 @@ for pp in range(0, len(percentiles)):
 
 	trento_gauge = 1
 
-	
-
 	# modulus plots
 	for mode in modes:
+		counter_fig = counter_fig + 1
 		#plt.figure(counter_fig)
-		#plt.rcParams.update({'font.size': 20})
-		#from matplotlib.ticker import MaxNLocator
-		#ax = plt.figure(counter_fig).gca()
-		#ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-		#ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-		#plt.figure(figsize=(5.0,1.5))
+		plt.rcParams.update({'font.size': 20})
+		from matplotlib.ticker import MaxNLocator
+		ax = plt.figure(counter_fig).gca()
+		ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+		ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+		plt.figure(figsize=(5.0,1.5))
 
 		filename_trento = "output/two_point_random_" + centrality_class + "_m" + str(mode) + "_real.txt"
 		filename_trento_error = "output/two_point_random_" + centrality_class + "_m" + str(mode) + "_real_error.txt"
@@ -73,14 +71,11 @@ for pp in range(0, len(percentiles)):
 				y[i] = (-1.0)**mode/2./np.pi**2/clm[i, mode]*One_sw2_N + (1+sn2_N_N2)*one_points[mode, i]*one_points[mode, i]
 
 					
-		axs[mode][pp].scatter(l, y, label="IPSM", s=100, color = colors[0], marker= "+")
-		if (mode == modes[-1]):
-			axs[mode][pp].set_xlabel("l")
-		if (pp == percentiles[0]):
-			axs[mode][pp].set_ylabel("$G_l^{(" + str(mode)  + ")}$")
+		plt.scatter(l, y, label="IPSM", s=100, color = "orangered", marker= "+")
+		plt.xlabel("l")
+		plt.ylabel("$G_l^{(" + str(mode)  + ")}$")
 
-		if (mode == modes[0]):
-			axs[mode][pp].set_title(centrality_class+"%")
+
 
 
 
@@ -108,17 +103,16 @@ for pp in range(0, len(percentiles)):
 			if ((i == 0) & (mode == 0)):
 				y_trento[i] -= trento_one_ml[mode, i] * trento_one_ml[mode, i]
 			y_trento_error[i] =abs(trento_error[i,i]) # WHAT ABOUT m=0 ?
-		axs[mode][pp].axhline(y=0, color ="black", linestyle="dashed", linewidth=1.0, zorder = 1)
-		axs[mode][pp].scatter(l, y_trento, s=100, color = colors[1], label="TrENTo", marker= "x", zorder = 3)
-		axs[mode][pp].scatter(l, y_saclay_simple, s=100, color = colors[3], label="magma", marker= "1", zorder = 3)
-		axs[mode][pp].scatter(l, y_saclay, s=100, color = colors[2], label="CGC large-$N_c$", marker= "*", zorder = 2)
-		axs[mode][pp].set_xticks([1,3,5,7])
+		plt.axhline(y=0, color ="black", linestyle="dashed", linewidth=1.0, zorder = 1)
+		plt.scatter(l, y_trento, s=100, color = "green", label="TRENTo", marker= "x", zorder = 2)
+		plt.scatter(l, y_saclay_simple, s=100, color = "blue", label="magma", marker= "1", zorder = 2)
+		plt.scatter(l, y_saclay, s=100, color = "purple", label="Large-Nc-Glasma", marker= "*", zorder = 2)
+		plt.xticks([1,3,5,7])
 
-filename = "plots/two_point_modules_IPSM"   + ".pdf"
-handles, labels = axs[-1][-1].get_legend_handles_labels()
-figs.legend(handles, labels, loc='lower center',ncol=4)
-plt.savefig(filename, format='pdf', bbox_inches = "tight")
-
+		filename = "plots/two_point_modules_IPSM"  + "_m" + str(mode) + "_" + centrality_class + ".pdf"
+		plt.savefig(filename, format='pdf', bbox_inches = "tight")
+		plt.close()
+		plt.close(counter_fig)
 
 
 
