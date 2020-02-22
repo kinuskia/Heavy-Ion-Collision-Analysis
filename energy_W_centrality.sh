@@ -4,7 +4,7 @@ cd /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion
 
 
 # Create the specific Trento script (name: PbPb.txt)
-NEVENTS=100000
+NEVENTS=10000
 # DESTINATION=/Volumes/MAC/Trento/PbPb
 DESTINATION=Trento/PbPb$NEVENTS
 g++ -std=c++11 -O2 -o trento_generator trento_generator.cpp
@@ -19,7 +19,7 @@ g++ -std=c++11 -O2 -o trento_generator trento_generator.cpp
 rm -rf PbPb.txt
 	
 # Evaluate centrality of Trento files with name Trento/PbPb.dat, 
-g++ -std=c++11 -lgsl -O2 -o WCentrality analysis_W_centrality.cpp
+g++ -std=c++11 -lgsl -lgslcblas -O2 -o WCentrality analysis_W_centrality.cpp
 ./WCentrality $DESTINATION .dat $NEVENTS
 
 

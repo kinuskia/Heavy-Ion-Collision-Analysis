@@ -4,7 +4,7 @@ cd /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion
 
 
 # Create the specific Trento script (name: PbPb.txt)
-NEVENTS=10000
+NEVENTS=1000
 NBINS=50
 #DESTINATION=/Volumes/MAC/Trento/PbPb$NEVENTS
 DESTINATION=Trento/PbPb$NEVENTS

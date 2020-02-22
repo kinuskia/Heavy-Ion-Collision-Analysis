@@ -80,6 +80,9 @@ public:
 		{
 			x_sites_[i] = x_from_index(i);
 			y_sites_[i] = -y_from_index(i);
+		}
+		for (size_type i = 0; i < Nr_; ++i)
+		{
 			r_sites_[i] = R_ * i / Nr_;
 		}
 	}

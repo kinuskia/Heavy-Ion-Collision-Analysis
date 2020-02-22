@@ -5,6 +5,7 @@
 #include <vector>
 #include <fstream>
 #include <iomanip>
+#include <cmath>
 
 // Function which takes an GSL vector of Vector-columns and writes them to a text file
 
