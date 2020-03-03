@@ -36,7 +36,8 @@ public:
 	, Nm_(128)
 	, Nr_(50)
 	, N_discret_(25)
-	, reaction_angle_(0)
+	, b_percentiles_edges_(0)
+	, b_percentiles_prob_(0)
 	{
 
 	}
@@ -72,11 +73,6 @@ public:
 		Nm_ = N;
 	}
 
-	// setter for reaction plane angle
-	void set_reaction_plane_angle( number_type angle)
-	{
-		reaction_angle_ = angle;
-	}
 
 	// integrate one-point function over phi at fixed r
 	// (only declaration, it is defined outside this class, see below)
@@ -95,7 +91,7 @@ public:
 		number_type y = r*sin(phi);
 		number_type x1;
 		number_type y1;
-		number_type angle = reaction_angle_;
+		number_type angle = 0;
 		x1 = x*cos(angle) + y*sin(angle);
 		y1 = (-1.)*x*sin(angle) + y*cos(angle);
 		x = x1;
@@ -104,24 +100,33 @@ public:
 		return model_.OnePoint(x, y)/normalization_;
 	}
 
+	// Read in data on impact parameter distribution
+	void get_impact_parameter_distribution(std::string filename)
+	{
+		std::vector<std::vector<number_type>> input(2);
+		read_data(filename, input);
+
+		b_percentiles_edges_ = input[0];
+		b_percentiles_prob_ = input[1];
+	}
+
 	// Getter for two-Point correlation function in polar coordinates
-	number_type TwoPoint(number_type r1, number_type phi1, number_type r2, number_type phi2)
+	/* naming of the angles
+		phiA : phi(r1) - phi(r2)
+		phiB : phi(r1) - phiR
+	*/
+	number_type TwoPoint(number_type r1, number_type r2, number_type b, number_type phiA, number_type phiB)
 	{
-		number_type x1 = r1*cos(phi1);
-		number_type y1 = r1*sin(phi1);
-		number_type x2 = r2*cos(phi2);
-		number_type y2 = r2*sin(phi2);
-
-		return model_.TwoPoint(x1, y1, x2, y2);
+		return model_.TwoPoint(r1, r2, b, phiA, phiB);
 	}
 
-	number_type TwoPoint(number_type r1, number_type r2, number_type phi)
-	{
-		number_type R = sqrt(r1*r1+r2*r2+2.*r1*r2*cos(phi));
-		number_type r = sqrt(r1*r1+r2*r2-2.*r1*r2*cos(phi));
+	// number_type TwoPoint(number_type r1, number_type r2, number_type phi)
+	// {
+	// 	number_type R = sqrt(r1*r1+r2*r2+2.*r1*r2*cos(phi));
+	// 	number_type r = sqrt(r1*r1+r2*r2-2.*r1*r2*cos(phi));
 
-		return model_.TwoPoint(R, r);
-	}
+	// 	return model_.TwoPoint(R, r);
+	// }
 
 	// compute total integral of one point function = normalization
 	void DetermineNormalization()
@@ -253,119 +258,119 @@ public:
 		return result; 
 	}
 
-	// integrate two-point function over r2 at fixed phi1, phi2, r1, m2, l2
-	// and Besselfunction in r2
-	number_type integ_r2(int m2, int l2, number_type phi1, number_type phi2, number_type r1);
+	// // integrate two-point function over r2 at fixed phi1, phi2, r1, m2, l2
+	// // and Besselfunction in r2
+	// number_type integ_r2(int m2, int l2, number_type phi1, number_type phi2, number_type r1);
 
-	// integrate two-point function over r1 at fixed phi1, phi2, m1, l1
-	// and Besselfunction in r1
-	number_type integ_r1(int m1, int l1, int m2, int l2, number_type phi1, number_type phi2);
+	// // integrate two-point function over r1 at fixed phi1, phi2, m1, l1
+	// // and Besselfunction in r1
+	// number_type integ_r1(int m1, int l1, int m2, int l2, number_type phi1, number_type phi2);
 
 	
-	// my own integration routine for the r1, r2 integration
-	number_type integ_r(int m1, int l1, int m2, int l2, number_type phi1, number_type phi2)
-	{
-		number_type result = 0;
-		size_type N = N_discret_;
-		number_type width = (rMax_-0.2)/N;
+	// // my own integration routine for the r1, r2 integration
+	// number_type integ_r(int m1, int l1, int m2, int l2, number_type phi1, number_type phi2)
+	// {
+	// 	number_type result = 0;
+	// 	size_type N = N_discret_;
+	// 	number_type width = (rMax_-0.2)/N;
 
-		// compute integral over r1
-		// Use trapezoidal rule
-		for (size_type i = 0; i <= N; ++i) // loop over r1
-		{
-			number_type r1 = (rMax_-0.2)*i/N;
-			//std::cout << "r1: " << r1 << "\n";
+	// 	// compute integral over r1
+	// 	// Use trapezoidal rule
+	// 	for (size_type i = 0; i <= N; ++i) // loop over r1
+	// 	{
+	// 		number_type r1 = (rMax_-0.2)*i/N;
+	// 		//std::cout << "r1: " << r1 << "\n";
 
-			// compute integral over r2 at fixed r1
-			number_type integral_r2 = 0;
-			for (size_type j = 0; j < N; ++j) // one fewer grid point and offset so that f is never evaluated at the same radius as r1
-			{
-				number_type r2 = (rMax_-0.2)*(0.5+j)/N;
-				number_type f = weight(m1, l1, r1)*weight(m2, l2, r2)*TwoPoint(r1, phi1, r2, phi2);
-				//std::cout << "phi1: " << phi1 << " phi2: " << phi2  <<  " r2: " << r2 << " f: " << f << "\n";
-				// Use trapezoidal rule
-				if ((j == 0) || (j == (N-1)))
-				{
-					integral_r2 += f/2;
-				}
-				else
-				{
-					integral_r2 += f;
-				}
-			}
-			integral_r2 *= width;
+	// 		// compute integral over r2 at fixed r1
+	// 		number_type integral_r2 = 0;
+	// 		for (size_type j = 0; j < N; ++j) // one fewer grid point and offset so that f is never evaluated at the same radius as r1
+	// 		{
+	// 			number_type r2 = (rMax_-0.2)*(0.5+j)/N;
+	// 			number_type f = weight(m1, l1, r1)*weight(m2, l2, r2)*TwoPoint(r1, r2, 0, phi1, phi2);
+	// 			//std::cout << "phi1: " << phi1 << " phi2: " << phi2  <<  " r2: " << r2 << " f: " << f << "\n";
+	// 			// Use trapezoidal rule
+	// 			if ((j == 0) || (j == (N-1)))
+	// 			{
+	// 				integral_r2 += f/2;
+	// 			}
+	// 			else
+	// 			{
+	// 				integral_r2 += f;
+	// 			}
+	// 		}
+	// 		integral_r2 *= width;
 
-			// use integral_r2 result as input for trapezoidal rule in r1-direction
-			if ((i == 0) || (i == N))
-			{
-				result += integral_r2/2;
-			}
-			else
-			{
-				result += integral_r2;
-			}
-		}
-		result *= width;
+	// 		// use integral_r2 result as input for trapezoidal rule in r1-direction
+	// 		if ((i == 0) || (i == N))
+	// 		{
+	// 			result += integral_r2/2;
+	// 		}
+	// 		else
+	// 		{
+	// 			result += integral_r2;
+	// 		}
+	// 	}
+	// 	result *= width;
 
-		//std::cout << result << "\n";
+	// 	//std::cout << result << "\n";
 
 
-		return result;
-	}
+	// 	return result;
+	// }
+
+	// // my own integration routine for the r1, r2 integration for the TwoMode_fast method
+	// number_type integ_r_fast(int m, int l1, int l2, number_type phiA, number_type phiB)
+	// {
+	// 	number_type result = 0;
+	// 	size_type N = N_discret_;
+	// 	number_type width = (rMax_-0.2)/N;
+
+	// 	// compute integral over r1
+	// 	// Use trapezoidal rule
+	// 	for (size_type i = 0; i <= N; ++i) // loop over r1
+	// 	{
+	// 		number_type r1 = (rMax_-0.2)*i/N;
+	// 		//std::cout << "r1: " << r1 << "\n";
+
+	// 		// compute integral over r2 at fixed r1
+	// 		number_type integral_r2 = 0;
+	// 		for (size_type j = 0; j < N; ++j) // one fewer grid point and offset so that f is never evaluated at the same radius as r1
+	// 		{
+	// 			number_type r2 = (rMax_-0.2)*(0.5+j)/N;
+	// 			number_type f = weight(m, l1, r1)*weight(m, l2, r2)*TwoPoint(r1, r2, 0, phiA, phiB);
+	// 			//std::cout << "phi1: " << phi1 << " phi2: " << phi2  <<  " r2: " << r2 << " f: " << f << "\n";
+	// 			// Use trapezoidal rule
+	// 			if ((j == 0) || (j == (N-1)))
+	// 			{
+	// 				integral_r2 += f/2;
+	// 			}
+	// 			else
+	// 			{
+	// 				integral_r2 += f;
+	// 			}
+	// 		}
+	// 		integral_r2 *= width;
+
+	// 		// use integral_r2 result as input for trapezoidal rule in r1-direction
+	// 		if ((i == 0) || (i == N))
+	// 		{
+	// 			result += integral_r2/2;
+	// 		}
+	// 		else
+	// 		{
+	// 			result += integral_r2;
+	// 		}
+	// 	}
+	// 	result *= width;
+
+	// 	//std::cout << result << "\n";
+
+
+	// 	return result;
+	// }
 
 	// my own integration routine for the r1, r2 integration for the TwoMode_fast method
-	number_type integ_r_fast(int m, int l1, int l2, number_type phi)
-	{
-		number_type result = 0;
-		size_type N = N_discret_;
-		number_type width = (rMax_-0.2)/N;
-
-		// compute integral over r1
-		// Use trapezoidal rule
-		for (size_type i = 0; i <= N; ++i) // loop over r1
-		{
-			number_type r1 = (rMax_-0.2)*i/N;
-			//std::cout << "r1: " << r1 << "\n";
-
-			// compute integral over r2 at fixed r1
-			number_type integral_r2 = 0;
-			for (size_type j = 0; j < N; ++j) // one fewer grid point and offset so that f is never evaluated at the same radius as r1
-			{
-				number_type r2 = (rMax_-0.2)*(0.5+j)/N;
-				number_type f = weight(m, l1, r1)*weight(m, l2, r2)*TwoPoint(r1, r2, phi);
-				//std::cout << "phi1: " << phi1 << " phi2: " << phi2  <<  " r2: " << r2 << " f: " << f << "\n";
-				// Use trapezoidal rule
-				if ((j == 0) || (j == (N-1)))
-				{
-					integral_r2 += f/2;
-				}
-				else
-				{
-					integral_r2 += f;
-				}
-			}
-			integral_r2 *= width;
-
-			// use integral_r2 result as input for trapezoidal rule in r1-direction
-			if ((i == 0) || (i == N))
-			{
-				result += integral_r2/2;
-			}
-			else
-			{
-				result += integral_r2;
-			}
-		}
-		result *= width;
-
-		//std::cout << result << "\n";
-
-
-		return result;
-	}
-
-	// my own integration routine for the r1, r2 integration for the TwoMode_fast method
-	number_type integ_r_mode_fast(int m, int l1, int l2, number_type r_max = (9.604-0.2))
+	number_type integ_r_mode_fast(int m, int l1, int l2, size_type centrality_min, number_type r_max = (9.604-0.2))
 	{
 		number_type result = 0;
 		size_type N = N_discret_;
@@ -384,7 +389,7 @@ public:
 			for (size_type j = 0; j <= N; ++j) 
 			{
 				number_type r2 = rMax*j/N;
-				number_type f = weight(m, l1, r1)*weight(m, l2, r2)*TwoPoint_mode(m, r1, r2);
+				number_type f = weight(m, l1, r1)*weight(m, l2, r2)*TwoPoint_mode(m, r1, r2, centrality_min);
 				//std::cout << "phi1: " << phi1 << " phi2: " << phi2  <<  " r2: " << r2 << " f: " << f << "\n";
 				// Use trapezoidal rule
 				if ((j == 0) || (j == N))
@@ -416,209 +421,209 @@ public:
 		return result;
 	}
 
-	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
-	number_type TwoMode(int m1, int l1, int m2, int l2, size_type N = 1)
-	{
-		get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
+	// // compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
+	// number_type TwoMode(int m1, int l1, int m2, int l2, size_type N = 1)
+	// {
+	// 	get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
 		
-		//Compute FFT of a function E_l1l2^(m1m2)(phi1, phi2)
+	// 	//Compute FFT of a function E_l1l2^(m1m2)(phi1, phi2)
 		
-		// Compute result for various reaction plane angles and average over them
-		// (trapezoidal rule)
-		number_type angle_width = 2.*pi_/N;
-		number_type result = 0;
+	// 	// Compute result for various reaction plane angles and average over them
+	// 	// (trapezoidal rule)
+	// 	number_type angle_width = 2.*pi_/N;
+	// 	number_type result = 0;
 
-		for (size_type i = 0; i < N; ++i)
-		{
-			set_reaction_plane_angle(angle_width*i);
+	// 	for (size_type i = 0; i < N; ++i)
+	// 	{
+	// 		set_reaction_plane_angle(angle_width*i);
 
-			// Step 1: Compute FFT with respect to phi1 at fixed phi2
-			// For each phi2, the FFT with m=m1 is saved in a vector
-			number_type* FFT_real;
-			number_type* FFT_imag;
-			FFT_real = new number_type[Nm_];
-			FFT_imag = new number_type[Nm_];
+	// 		// Step 1: Compute FFT with respect to phi1 at fixed phi2
+	// 		// For each phi2, the FFT with m=m1 is saved in a vector
+	// 		number_type* FFT_real;
+	// 		number_type* FFT_imag;
+	// 		FFT_real = new number_type[Nm_];
+	// 		FFT_imag = new number_type[Nm_];
 			
-			// Loop over phi2
-			for (size_type j = 0; j < Nm_; ++j)
-			{
-				// Do FFT with respect to phi1 at fixed phi2
-				number_type phi2 = 2.* pi_ * j / Nm_;
-				number_type* fft;
-				fft = new number_type[Nm_];
+	// 		// Loop over phi2
+	// 		for (size_type j = 0; j < Nm_; ++j)
+	// 		{
+	// 			// Do FFT with respect to phi1 at fixed phi2
+	// 			number_type phi2 = 2.* pi_ * j / Nm_;
+	// 			number_type* fft;
+	// 			fft = new number_type[Nm_];
 
-				for (size_type i = 0; i < Nm_; ++i)
-				{
-					number_type phi1 = 2. * pi_ * i / Nm_;
+	// 			for (size_type i = 0; i < Nm_; ++i)
+	// 			{
+	// 				number_type phi1 = 2. * pi_ * i / Nm_;
 				
-					fft[i] = integ_r(m1, l1, m2, l2, phi1, phi2);
-					// 	if (i == 0)
-					// {
-					// 	std::cout << "m1: " << m1 << " ";
-					// 	std::cout << "l1: " << l1 << " ";
-					// 	std::cout << "m2: " << m2 << " ";
-					// 	std::cout << "l2: " << l2 << " ";
-					// 	std::cout << fft[i] << "\n";
-					// }
-				}
+	// 				fft[i] = integ_r(m1, l1, m2, l2, phi1, phi2);
+	// 				// 	if (i == 0)
+	// 				// {
+	// 				// 	std::cout << "m1: " << m1 << " ";
+	// 				// 	std::cout << "l1: " << l1 << " ";
+	// 				// 	std::cout << "m2: " << m2 << " ";
+	// 				// 	std::cout << "l2: " << l2 << " ";
+	// 				// 	std::cout << fft[i] << "\n";
+	// 				// }
+	// 			}
 
-				gsl_fft_real_radix2_transform(fft, 1, Nm_);
+	// 			gsl_fft_real_radix2_transform(fft, 1, Nm_);
 
-				// save result
-				if (m1 >= 0)
-				{
-					FFT_real[j] = fft[m1]/Nm_;
-					if (m1 == 0)
-					{
-						FFT_imag[j] = 0;
-					}
-					else
-					{
-						FFT_imag[j] = fft[Nm_-m1]/Nm_;
-					}
-				}
-				else
-				{
-					FFT_real[j] = fft[-m1]/Nm_;
-					FFT_imag[j] = -fft[Nm_+m1]/Nm_;
-				}
-			}
+	// 			// save result
+	// 			if (m1 >= 0)
+	// 			{
+	// 				FFT_real[j] = fft[m1]/Nm_;
+	// 				if (m1 == 0)
+	// 				{
+	// 					FFT_imag[j] = 0;
+	// 				}
+	// 				else
+	// 				{
+	// 					FFT_imag[j] = fft[Nm_-m1]/Nm_;
+	// 				}
+	// 			}
+	// 			else
+	// 			{
+	// 				FFT_real[j] = fft[-m1]/Nm_;
+	// 				FFT_imag[j] = -fft[Nm_+m1]/Nm_;
+	// 			}
+	// 		}
 
-			// Step 2: Compute FFT with respect to phi2
-			gsl_fft_real_radix2_transform(FFT_real, 1, Nm_);
-			gsl_fft_real_radix2_transform(FFT_imag, 1, Nm_);
+	// 		// Step 2: Compute FFT with respect to phi2
+	// 		gsl_fft_real_radix2_transform(FFT_real, 1, Nm_);
+	// 		gsl_fft_real_radix2_transform(FFT_imag, 1, Nm_);
 			
-			if (m2 == 0)
-			{
-				result += (FFT_real[m2])/Nm_;
-			}
-			else if (m2 > 0)
-			{
-				result += (FFT_real[m2] - FFT_imag[Nm_-m2])/Nm_;
-			}
-			else
-			{
-				// I'm just interested in the real part (the imaginary part is zero)
-				result += (FFT_real[-m2] + FFT_imag[Nm_+m2])/Nm_;
+	// 		if (m2 == 0)
+	// 		{
+	// 			result += (FFT_real[m2])/Nm_;
+	// 		}
+	// 		else if (m2 > 0)
+	// 		{
+	// 			result += (FFT_real[m2] - FFT_imag[Nm_-m2])/Nm_;
+	// 		}
+	// 		else
+	// 		{
+	// 			// I'm just interested in the real part (the imaginary part is zero)
+	// 			result += (FFT_real[-m2] + FFT_imag[Nm_+m2])/Nm_;
 
-				// //imaginary part:
-				// result += (-FFT_real[Nm_+m2] + FFT_imag[-m2])/Nm_;
-			}
+	// 			// //imaginary part:
+	// 			// result += (-FFT_real[Nm_+m2] + FFT_imag[-m2])/Nm_;
+	// 		}
 
-		}
-		result *= angle_width;
-		// "result" is now the integral from 0 to 2pi. We want the average:
-		result /= (2.*pi_);
+	// 	}
+	// 	result *= angle_width;
+	// 	// "result" is now the integral from 0 to 2pi. We want the average:
+	// 	result /= (2.*pi_);
 
-		// Step 3: Scale result with the right c_l^(m)
-		if (m1 == 0 && l1 == 1)
-		{
-			result /= 0.5;
-		}
-		else if (m1 == 0 && l1 > 1)
-		{
-			result /= c(m1, l1-1);
-		}
-		else
-		{
-			result /= c(m1, l1);
-		}
+	// 	// Step 3: Scale result with the right c_l^(m)
+	// 	if (m1 == 0 && l1 == 1)
+	// 	{
+	// 		result /= 0.5;
+	// 	}
+	// 	else if (m1 == 0 && l1 > 1)
+	// 	{
+	// 		result /= c(m1, l1-1);
+	// 	}
+	// 	else
+	// 	{
+	// 		result /= c(m1, l1);
+	// 	}
 
-		if (m2 == 0 && l2 == 1)
-		{
-			result /= 0.5;
-		}
-		else if (m2 == 0 && l2 > 1)
-		{
-			result /= c(m2, l2-1);
-		}
-		else
-		{
-			result /= c(m2, l2);
-		}
+	// 	if (m2 == 0 && l2 == 1)
+	// 	{
+	// 		result /= 0.5;
+	// 	}
+	// 	else if (m2 == 0 && l2 > 1)
+	// 	{
+	// 		result /= c(m2, l2-1);
+	// 	}
+	// 	else
+	// 	{
+	// 		result /= c(m2, l2);
+	// 	}
 
 		
 
-		return result;
-	}
+	// 	return result;
+	// }
 
-	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
-	// using symmetries
-	number_type TwoMode_fast(int m1, int l1, int m2, int l2)
-	{
-		get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
+	// // compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
+	// // using symmetries
+	// number_type TwoMode_fast(int m1, int l1, int m2, int l2)
+	// {
+	// 	get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
 		
-		// m1+m2 = 0
-		if (m1 + m2 != 0)
-		{
-			return 0;
-		}
-		int m = abs(m1);
+	// 	// m1+m2 = 0
+	// 	if (m1 + m2 != 0)
+	// 	{
+	// 		return 0;
+	// 	}
+	// 	int m = abs(m1);
 
-		number_type result;
+	// 	number_type result;
 
-		//Compute FFT of a function E_l1l2^(m, -m)(phi)
-		// where phi = phi1-phi2
+	// 	//Compute FFT of a function E_l1l2^(m, -m)(phi)
+	// 	// where phi = phi1-phi2
 		
 
-		number_type* FFT;
-		FFT = new number_type[Nm_];
+	// 	number_type* FFT;
+	// 	FFT = new number_type[Nm_];
 
-		for (size_type i = 0; i < Nm_; ++i)
-		{
-			number_type phi = 2. * pi_ * i / Nm_;
+	// 	for (size_type i = 0; i < Nm_; ++i)
+	// 	{
+	// 		number_type phi = 2. * pi_ * i / Nm_;
 				
-			FFT[i] = integ_r_fast(m, l1, l2, phi);
+	// 		FFT[i] = integ_r_fast(m, l1, l2, phi);
 	
-		}
+	// 	}
 
-		gsl_fft_real_radix2_transform(FFT, 1, Nm_);
+	// 	gsl_fft_real_radix2_transform(FFT, 1, Nm_);
 
-		result = FFT[m]/Nm_;
+	// 	result = FFT[m]/Nm_;
 		
 		
 
-		// Step 3: Scale result with the right c_l^(m)
-		if (m == 0 && l1 == 1)
-		{
-			result /= 0.5;
-		}
-		else if (m == 0 && l1 > 1)
-		{
-			result /= c(m, l1-1);
-		}
-		else
-		{
-			result /= c(m, l1);
-		}
+	// 	// Step 3: Scale result with the right c_l^(m)
+	// 	if (m == 0 && l1 == 1)
+	// 	{
+	// 		result /= 0.5;
+	// 	}
+	// 	else if (m == 0 && l1 > 1)
+	// 	{
+	// 		result /= c(m, l1-1);
+	// 	}
+	// 	else
+	// 	{
+	// 		result /= c(m, l1);
+	// 	}
 
-		if (m == 0 && l2 == 1)
-		{
-			result /= 0.5;
-		}
-		else if (m == 0 && l2 > 1)
-		{
-			result /= c(m, l2-1);
-		}
-		else
-		{
-			result /= c(m, l2);
-		}
+	// 	if (m == 0 && l2 == 1)
+	// 	{
+	// 		result /= 0.5;
+	// 	}
+	// 	else if (m == 0 && l2 > 1)
+	// 	{
+	// 		result /= c(m, l2-1);
+	// 	}
+	// 	else
+	// 	{
+	// 		result /= c(m, l2);
+	// 	}
 
 
-		if (m%2 == 1)
-		{
-			result *= -1.0;
-		}
+	// 	if (m%2 == 1)
+	// 	{
+	// 		result *= -1.0;
+	// 	}
 
 		
 
-		return result;
-	}
+	// 	return result;
+	// }
 
 	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
 	// using symmetries and first FFT then r-integration
-	number_type TwoMode_fast2(int m1, int l1, int m2, int l2)
+	number_type TwoMode_fast2(int m1, int l1, int m2, int l2, size_type centrality_min)
 	{
 		get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
 		
@@ -632,7 +637,7 @@ public:
 		number_type result;
 
 		
-		result = integ_r_mode_fast(m, l1, l2);	
+		result = integ_r_mode_fast(m, l1, l2, centrality_min);	
 		
 		
 
@@ -673,122 +678,162 @@ public:
 	}
 
 	// Compute FFT of TwoPoint function with respect to phi1-phi2
-	number_type TwoPoint_mode(int m, number_type r1, number_type r2)
+	number_type TwoPoint_mode(int m, number_type r1, number_type r2, size_type centrality_min)
 	{
 		assert(m >= 0);
-		number_type* FFT;
-		FFT = new number_type[Nm_];
 
-		for (size_type i = 0; i < Nm_; ++i)
+		// integrate over impact parameters (trapezoidal rule with two points)
+		number_type result_b = 0;
+
+		for (size_type k = 0; k < 2; ++k)
 		{
-			number_type phi = 2. * pi_ * i / Nm_;	
-			FFT[i] = TwoPoint(r1, r2, phi);
-	
-		}
+			number_type b = b_percentiles_edges_[centrality_min+k];
+			number_type p = b_percentiles_prob_[centrality_min+k];
 
-		gsl_fft_real_radix2_transform(FFT, 1, Nm_);
-
-		return FFT[m]/Nm_;
-
-	}
-
-	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
-	number_type TwoMode_imag(int m1, int l1, int m2, int l2)
-	{
-		get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
-		//Compute FFT of a function E_l1l2^(m1m2)(phi1, phi2)
-		
-		// Step 1: Compute FFT with respect to phi1 at fixed phi2
-		// For each phi2, the FFT with m=m1 is saved in a vector
-		number_type* FFT_real;
-		number_type* FFT_imag;
-		FFT_real = new number_type[Nm_];
-		FFT_imag = new number_type[Nm_];
-		
-		// Loop over phi2
-		for (size_type j = 0; j < Nm_; ++j)
-		{
-			// Do FFT with respect to phi1 at fixed phi2
-			number_type phi2 = 2.* pi_ * j / Nm_;
-			number_type* fft;
-			fft = new number_type[Nm_];
+			number_type result0 = 0;
+			number_type* FFT;
+			FFT = new number_type[Nm_];
 
 			for (size_type i = 0; i < Nm_; ++i)
 			{
-				number_type phi1 = 2. * pi_ * i / Nm_;
-				fft[i] = integ_r1(m1, l1, m2, l2, phi1, phi2);
+				number_type phiA = 2. * pi_ * i / Nm_;	
+				number_type fft_raw = TwoPoint_phiB(r1, r2, b, phiA)/pi_;
+				
+
+				FFT[i] = fft_raw;
 			}
 
-			gsl_fft_real_radix2_transform(fft, 1, Nm_);
+			gsl_fft_real_radix2_transform(FFT, 1, Nm_);
 
-			// save result 
-			if (m1 >= 0)
-			{
-				FFT_real[j] = fft[m1]/Nm_;
-				if (m1 == 0)
-				{
-					FFT_imag[j] = 0;
-				}
-				else
-				{
-					FFT_imag[j] = fft[Nm_-m1]/Nm_;
-				}
-			}
-			else
-			{
-				FFT_real[j] = fft[-m1]/Nm_;
-				FFT_imag[j] = -fft[Nm_+m1]/Nm_;
-			}
+			result0 = FFT[0]/Nm_;
+
+			result_b += p*result0/2;
+
 		}
 
-		// Step 2: Compute FFT with respect to phi2
-		gsl_fft_real_radix2_transform(FFT_real, 1, Nm_);
-		gsl_fft_real_radix2_transform(FFT_imag, 1, Nm_);
-		number_type result;
-		if (m2 == 0)
-		{
-			result = (FFT_imag[m2])/Nm_;
-		}
-		else if (m2 > 0)
-		{
-			result = (FFT_real[Nm_-m2] + FFT_imag[m2])/Nm_;
-		}
-		else
-		{
-			result = (-FFT_real[Nm_+m2] + FFT_imag[-m2])/Nm_;
-		}
+		result_b *= (b_percentiles_edges_[centrality_min+1] -b_percentiles_edges_[centrality_min]);
 
+		result_b *= 100.; // since we are integrating the prob density over a percentile
 
+		return result_b;
+	}
 
-		// Step 3: Scale result with the right c_l^(m)
-		if (m1 == 0 && l1 == 1)
-		{
-			result /= 0.5;
-		}
-		else if (m1 == 0 && l1 > 1)
-		{
-			result /= c(m1, l1-1);
-		}
-		else
-		{
-			result /= c(m1, l1);
-		}
+	// Compute integral over TwoPoint over the second angle phiB
+	number_type TwoPoint_phiB(number_type r1, number_type r2, number_type b, number_type phiA)
+	{
+		// use trapezoidal rule with periodic boundary conditions
+		number_type result = 0; 
 
-		if (m2 == 0 && l2 == 1)
+		size_type N = Nm_/2;
+		for (size_type i = 0; i < N; ++i)
 		{
-			result /= 0.5;
+			number_type phiB = pi_*i/N; // it suffices to integrate from 0 to pi
+			number_type f = TwoPoint(r1, r2, b, phiA, phiB);
+
+			result += f;
 		}
-		else if (m2 == 0 && l2 > 1)
-		{
-			result /= c(m2, l2-1);
-		}
-		else
-		{
-			result /= c(m2, l2);
-		}
+		result *= pi_/N;
 
 		return result;
 	}
+
+	// // compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
+	// number_type TwoMode_imag(int m1, int l1, int m2, int l2)
+	// {
+	// 	get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
+	// 	//Compute FFT of a function E_l1l2^(m1m2)(phi1, phi2)
+		
+	// 	// Step 1: Compute FFT with respect to phi1 at fixed phi2
+	// 	// For each phi2, the FFT with m=m1 is saved in a vector
+	// 	number_type* FFT_real;
+	// 	number_type* FFT_imag;
+	// 	FFT_real = new number_type[Nm_];
+	// 	FFT_imag = new number_type[Nm_];
+		
+	// 	// Loop over phi2
+	// 	for (size_type j = 0; j < Nm_; ++j)
+	// 	{
+	// 		// Do FFT with respect to phi1 at fixed phi2
+	// 		number_type phi2 = 2.* pi_ * j / Nm_;
+	// 		number_type* fft;
+	// 		fft = new number_type[Nm_];
+
+	// 		for (size_type i = 0; i < Nm_; ++i)
+	// 		{
+	// 			number_type phi1 = 2. * pi_ * i / Nm_;
+	// 			fft[i] = integ_r1(m1, l1, m2, l2, phi1, phi2);
+	// 		}
+
+	// 		gsl_fft_real_radix2_transform(fft, 1, Nm_);
+
+	// 		// save result 
+	// 		if (m1 >= 0)
+	// 		{
+	// 			FFT_real[j] = fft[m1]/Nm_;
+	// 			if (m1 == 0)
+	// 			{
+	// 				FFT_imag[j] = 0;
+	// 			}
+	// 			else
+	// 			{
+	// 				FFT_imag[j] = fft[Nm_-m1]/Nm_;
+	// 			}
+	// 		}
+	// 		else
+	// 		{
+	// 			FFT_real[j] = fft[-m1]/Nm_;
+	// 			FFT_imag[j] = -fft[Nm_+m1]/Nm_;
+	// 		}
+	// 	}
+
+	// 	// Step 2: Compute FFT with respect to phi2
+	// 	gsl_fft_real_radix2_transform(FFT_real, 1, Nm_);
+	// 	gsl_fft_real_radix2_transform(FFT_imag, 1, Nm_);
+	// 	number_type result;
+	// 	if (m2 == 0)
+	// 	{
+	// 		result = (FFT_imag[m2])/Nm_;
+	// 	}
+	// 	else if (m2 > 0)
+	// 	{
+	// 		result = (FFT_real[Nm_-m2] + FFT_imag[m2])/Nm_;
+	// 	}
+	// 	else
+	// 	{
+	// 		result = (-FFT_real[Nm_+m2] + FFT_imag[-m2])/Nm_;
+	// 	}
+
+
+
+	// 	// Step 3: Scale result with the right c_l^(m)
+	// 	if (m1 == 0 && l1 == 1)
+	// 	{
+	// 		result /= 0.5;
+	// 	}
+	// 	else if (m1 == 0 && l1 > 1)
+	// 	{
+	// 		result /= c(m1, l1-1);
+	// 	}
+	// 	else
+	// 	{
+	// 		result /= c(m1, l1);
+	// 	}
+
+	// 	if (m2 == 0 && l2 == 1)
+	// 	{
+	// 		result /= 0.5;
+	// 	}
+	// 	else if (m2 == 0 && l2 > 1)
+	// 	{
+	// 		result /= c(m2, l2-1);
+	// 	}
+	// 	else
+	// 	{
+	// 		result /= c(m2, l2);
+	// 	}
+
+	// 	return result;
+	// }
 
 	// 2D Fourier test
 	number_type Fourier2D(int m1, int m2)
@@ -925,9 +970,13 @@ private:
 	gsl_spline* rho_spline_;
 	gsl_interp_accel* rho_acc_;
 
+	// vector of percentile edges for impact parameter
+	std::vector<number_type> b_percentiles_edges_;
+	// corresponding probability density
+	std::vector<number_type> b_percentiles_prob_;
+
 	gsl_matrix* bessel_deriv_zeros_;
 
-	number_type reaction_angle_;
 };
 
 
@@ -1050,100 +1099,100 @@ number_type FBDecomposition<number_type>::integ_W_r(number_type r_lower, number_
 	return integral;
 }
 
-// struct for integ_r2
-template<typename size_type, typename number_type>
-struct integ_r2_params
-{
-	size_type m2;
-	size_type l2;
-	number_type phi1;
-	number_type phi2;
-	number_type r1;
-	FBDecomposition<number_type>* pt_FBDecomposition;
-};
+// // struct for integ_r2
+// template<typename size_type, typename number_type>
+// struct integ_r2_params
+// {
+// 	size_type m2;
+// 	size_type l2;
+// 	number_type phi1;
+// 	number_type phi2;
+// 	number_type r1;
+// 	FBDecomposition<number_type>* pt_FBDecomposition;
+// };
 
-// gsl function to call to integrate over r2
-double integ_r2_wrapper(double r, void* params)
-{
-	typedef int size_type;
-	typedef double number_type;
-	integ_r2_params<size_type, number_type>* params_ = (integ_r2_params<size_type, number_type>*) params;
-	size_type m2_ = params_->m2;
-	size_type l2_ = params_->l2;
-	number_type phi1_ = params_->phi1;
-	number_type phi2_ = params_->phi2;
-	number_type r1_ = params_->r1;
-	return (params_->pt_FBDecomposition->weight(m2_, l2_, r))*(params_->pt_FBDecomposition->TwoPoint(r1_, phi1_, r, phi2_));
-}
-
-
-// integrate two-point function over r2 at fixed phi1, phi2, r1, m2, l2
-// and Besselfunction in r2
-template<class number_type>
-number_type FBDecomposition<number_type>::integ_r2(int m2, int l2, number_type phi1, number_type phi2, number_type r1)
-{
-	typedef int size_type;
-	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
-	number_type integral;
-	number_type error;
-	integ_r2_params<size_type, number_type> params = {m2, l2, phi1, phi2, r1, this};
-
-	gsl_function F;
-	F.function = &integ_r2_wrapper;
-	F.params = &params;
-	gsl_integration_qags(&F, 0, (this->get_rMax()-0.2), 1e-5, 1e-5, 1000, w, &integral, &error);
-	//std::cout << " Radius: " << r << " Index: " << k <<  " Integral: " << integral << " Error abs: " << error << " Error rel: " << error/integral << "\n"; 
-	gsl_integration_workspace_free(w);
-	return integral;
-}
-
-// struct for integ_r1
-template<typename size_type, typename number_type>
-struct integ_r1_params
-{
-	size_type m1;
-	size_type l1;
-	size_type m2;
-	size_type l2;
-	number_type phi1;
-	number_type phi2;
-	FBDecomposition<number_type>* pt_FBDecomposition;
-};
-
-// gsl function to call to integrate over r1
-double integ_r1_wrapper(double r, void* params)
-{
-	typedef int size_type;
-	typedef double number_type;
-	integ_r1_params<size_type, number_type>* params_ = (integ_r1_params<size_type, number_type>*) params;
-	size_type m1_ = params_->m1;
-	size_type l1_ = params_->l1;
-	size_type m2_ = params_->m2;
-	size_type l2_ = params_->l2;
-	number_type phi1_ = params_->phi1;
-	number_type phi2_ = params_->phi2;
-	return (params_->pt_FBDecomposition->weight(m1_, l1_, r))*(params_->pt_FBDecomposition->integ_r2(m2_, l2_, phi1_, phi2_, r));
-}
+// // gsl function to call to integrate over r2
+// double integ_r2_wrapper(double r, void* params)
+// {
+// 	typedef int size_type;
+// 	typedef double number_type;
+// 	integ_r2_params<size_type, number_type>* params_ = (integ_r2_params<size_type, number_type>*) params;
+// 	size_type m2_ = params_->m2;
+// 	size_type l2_ = params_->l2;
+// 	number_type phi1_ = params_->phi1;
+// 	number_type phi2_ = params_->phi2;
+// 	number_type r1_ = params_->r1;
+// 	return (params_->pt_FBDecomposition->weight(m2_, l2_, r))*(params_->pt_FBDecomposition->TwoPoint(r1_, phi1_, r, phi2_));
+// }
 
 
-// integrate two-point function over r1 at fixed phi1, phi2, m2, l2
-// and Besselfunction in r1
-template<class number_type>
-number_type FBDecomposition<number_type>::integ_r1(int m1, int l1, int m2, int l2, number_type phi1, number_type phi2)
-{
-	typedef int size_type;
-	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
-	number_type integral;
-	number_type error;
-	integ_r1_params<size_type, number_type> params = {m1, l1, m2, l2, phi1, phi2, this};
+// // integrate two-point function over r2 at fixed phi1, phi2, r1, m2, l2
+// // and Besselfunction in r2
+// template<class number_type>
+// number_type FBDecomposition<number_type>::integ_r2(int m2, int l2, number_type phi1, number_type phi2, number_type r1)
+// {
+// 	typedef int size_type;
+// 	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
+// 	number_type integral;
+// 	number_type error;
+// 	integ_r2_params<size_type, number_type> params = {m2, l2, phi1, phi2, r1, this};
 
-	gsl_function F;
-	F.function = &integ_r1_wrapper;
-	F.params = &params;
-	gsl_integration_qags(&F, 0, (this->get_rMax()-0.2), 1e-5, 1e-5, 1000, w, &integral, &error);
-	//std::cout << " Radius: " << r << " Index: " << k <<  " Integral: " << integral << " Error abs: " << error << " Error rel: " << error/integral << "\n"; 
-	gsl_integration_workspace_free(w);
-	return integral;
-}
+// 	gsl_function F;
+// 	F.function = &integ_r2_wrapper;
+// 	F.params = &params;
+// 	gsl_integration_qags(&F, 0, (this->get_rMax()-0.2), 1e-5, 1e-5, 1000, w, &integral, &error);
+// 	//std::cout << " Radius: " << r << " Index: " << k <<  " Integral: " << integral << " Error abs: " << error << " Error rel: " << error/integral << "\n"; 
+// 	gsl_integration_workspace_free(w);
+// 	return integral;
+// }
+
+// // struct for integ_r1
+// template<typename size_type, typename number_type>
+// struct integ_r1_params
+// {
+// 	size_type m1;
+// 	size_type l1;
+// 	size_type m2;
+// 	size_type l2;
+// 	number_type phi1;
+// 	number_type phi2;
+// 	FBDecomposition<number_type>* pt_FBDecomposition;
+// };
+
+// // gsl function to call to integrate over r1
+// double integ_r1_wrapper(double r, void* params)
+// {
+// 	typedef int size_type;
+// 	typedef double number_type;
+// 	integ_r1_params<size_type, number_type>* params_ = (integ_r1_params<size_type, number_type>*) params;
+// 	size_type m1_ = params_->m1;
+// 	size_type l1_ = params_->l1;
+// 	size_type m2_ = params_->m2;
+// 	size_type l2_ = params_->l2;
+// 	number_type phi1_ = params_->phi1;
+// 	number_type phi2_ = params_->phi2;
+// 	return (params_->pt_FBDecomposition->weight(m1_, l1_, r))*(params_->pt_FBDecomposition->integ_r2(m2_, l2_, phi1_, phi2_, r));
+// }
+
+
+// // integrate two-point function over r1 at fixed phi1, phi2, m2, l2
+// // and Besselfunction in r1
+// template<class number_type>
+// number_type FBDecomposition<number_type>::integ_r1(int m1, int l1, int m2, int l2, number_type phi1, number_type phi2)
+// {
+// 	typedef int size_type;
+// 	gsl_integration_workspace* w = gsl_integration_workspace_alloc(1000);
+// 	number_type integral;
+// 	number_type error;
+// 	integ_r1_params<size_type, number_type> params = {m1, l1, m2, l2, phi1, phi2, this};
+
+// 	gsl_function F;
+// 	F.function = &integ_r1_wrapper;
+// 	F.params = &params;
+// 	gsl_integration_qags(&F, 0, (this->get_rMax()-0.2), 1e-5, 1e-5, 1000, w, &integral, &error);
+// 	//std::cout << " Radius: " << r << " Index: " << k <<  " Integral: " << integral << " Error abs: " << error << " Error rel: " << error/integral << "\n"; 
+// 	gsl_integration_workspace_free(w);
+// 	return integral;
+// }
 
 #endif

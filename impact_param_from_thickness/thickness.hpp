@@ -117,7 +117,7 @@ public:
 		number_type g = sqrt(4.*pi_*alpha_s_);
 		number_type W0 = W(0.);
 		number_type scale = Q0_*Q0_*Q0_*Q0_/3./alpha_s_/W0;
-		return sqrt(3.*g*g/4./scale*W(r)/pi_);
+		return sqrt(3.*g*g/4.*scale*W(r)/pi_);
 	}
 
 	// getter for one_point function in polar coords, d_phi=phi-phiR

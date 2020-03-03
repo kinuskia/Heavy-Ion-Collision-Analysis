@@ -40,7 +40,7 @@ for pp in range(0, len(percentiles)):
 		filename_trento_one = 'output/one_point_' + centrality_class +'.txt'
 
 		filename_Saclay_simple = "Saclay_simplified/output/"+centrality_class+"/two_point_random_connected_m_" + str(mode) + ".txt"
-		filename_Saclay = "Saclay/output/"+centrality_class+"/Nr41/Nm64/m1.4e-1/two_point_random_connected_m_" + str(mode) + ".txt"
+		filename_Saclay = "Saclay/output/"+centrality_class+"/Nr41/Nm64/m1.0e-2/two_point_random_connected_m_" + str(mode) + ".txt"
 
 		trento = np.loadtxt(filename_trento)
 		trento_error = np.loadtxt(filename_trento_error)
@@ -85,17 +85,17 @@ for pp in range(0, len(percentiles)):
 
 
 
-		# add geometry part
-		source_one_point = 'output/one_point_'+centrality_class+'.txt'
-		one_points = np.loadtxt(source_one_point)
-		for i in range(0, lMax):
-			for j in range(0, lMax):
-				if ((i==0)&(j==0)&(mode==0)):
-					saclay_simple[i][j] += 1./np.pi/np.pi*sn2_N_N2
-					saclay[i][j] += 1./np.pi/np.pi*sn2_N_N2
-				else:
-					saclay_simple[i][j] += (1.+ sn2_N_N2 )*one_points[mode, i]*one_points[mode, j]
-					saclay[i][j] += (1. + sn2_N_N2 )*one_points[mode, i]*one_points[mode, j]
+		# # add geometry part
+		# source_one_point = 'output/one_point_'+centrality_class+'.txt'
+		# one_points = np.loadtxt(source_one_point)
+		# for i in range(0, lMax):
+		# 	for j in range(0, lMax):
+		# 		if ((i==0)&(j==0)&(mode==0)):
+		# 			saclay_simple[i][j] += 1./np.pi/np.pi*sn2_N_N2
+		# 			saclay[i][j] += 1./np.pi/np.pi*sn2_N_N2
+		# 		else:
+		# 			saclay_simple[i][j] += (1.+ sn2_N_N2 )*one_points[mode, i]*one_points[mode, j]
+		# 			saclay[i][j] += (1. + sn2_N_N2 )*one_points[mode, i]*one_points[mode, j]
 
 		y_saclay_simple = np.zeros(lMax)
 		y_saclay = np.zeros(lMax)

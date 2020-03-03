@@ -7,7 +7,7 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 modes = [0,1,2,3,4]
 gridpoints = [41]
 Nm = [64]
-mIR = ["1e-5", "1e-4", "1e-3", "1e-2", "1e-1" , "1.4e-1", "1e0"]
+mIR = ["5.0e-3", "1.0e-2"]
 percentiles = [20]
 
 
@@ -32,7 +32,7 @@ grid = ImageGrid(fig, 111,          # as in plt.subplot(111)
 #     im = ax.imshow(np.random.random((6,6)), vmin=0, vmax=0.1)
 
 
-tick = 0.003*np.ones(len(gridpoints))
+tick = 0.009*np.ones(len(gridpoints))
 
 
 centrality_class =  str(percentiles[0]) + '-' + str(percentiles[0]+1)

@@ -40,6 +40,8 @@ int main (int argc, char* argv[]) // command-line input: centrality_min, central
 
 	decomposition.initialize();
 
+	decomposition.get_impact_parameter_distribution("../impact_param_from_thickness/percentiles.txt");
+
 	// Compute <e_l1^(m)e_l2^(-m)> as a function of l
 	int mMax = 4;
 	int lMax = 10;
@@ -57,7 +59,7 @@ int main (int argc, char* argv[]) // command-line input: centrality_min, central
 			{
 				std::cout << "m=" << m << ", l1= " << l1 << ", l2=" << l2 << "\n";
 			
-				number_type current = decomposition.TwoMode(m, l1, -m, l2, 1);	
+				number_type current = decomposition.TwoMode(m, l1, -m, l2, centrality_min);	
 				gsl_matrix_set(result, l1-1, l2-1, current);
 			}
 			

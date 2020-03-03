@@ -13,6 +13,7 @@
 
 #include <gsl/gsl_sf_bessel.h>
 #include "../auxiliary/bessel_deriv_zero.hpp"
+#include "../auxiliary/read_data.hpp"
 
 #include <vector>
 #include <assert.h>
@@ -38,7 +39,8 @@ public:
 	, normalization_(1.)
 	, Nm_(128)
 	, Nr_(50)
-	, reaction_angle_(0)
+	, b_percentiles_edges_(0)
+	, b_percentiles_prob_(0)
 	{
 
 	}
@@ -62,11 +64,6 @@ public:
 		return rMax_;
 	}
 
-	// setter for reaction plane angle
-	void set_reaction_plane_angle( number_type angle)
-	{
-		reaction_angle_ = angle;
-	}
 
 	// integrate one-point function over phi at fixed r
 	// (only declaration, it is defined outside this class, see below)
@@ -85,7 +82,7 @@ public:
 		number_type y = r*sin(phi);
 		number_type x1;
 		number_type y1;
-		number_type angle = reaction_angle_;
+		number_type angle = 0;
 		x1 = x*cos(angle) + y*sin(angle);
 		y1 = (-1.)*x*sin(angle) + y*cos(angle);
 		x = x1;
@@ -94,13 +91,20 @@ public:
 		return model_.OnePoint(x, y)/normalization_;
 	}
 
-	// Getter for two-Point correlation function in polar coordinates
-	number_type TwoPoint(number_type r, number_type phi)
+	// Read in data on impact parameter distribution
+	void get_impact_parameter_distribution(std::string filename)
 	{
-		number_type x = r*cos(phi);
-		number_type y = r*sin(phi);
+		std::vector<std::vector<number_type>> input(2);
+		read_data(filename, input);
 
-		return model_.TwoPoint(x, y);
+		b_percentiles_edges_ = input[0];
+		b_percentiles_prob_ = input[1];
+	}
+
+	// Getter for two-Point correlation function
+	number_type TwoPoint(number_type r, number_type b, number_type dPhi)
+	{
+		return model_.TwoPoint(r, b, dPhi);
 	}
 
 	// compute total integral of one point function = normalization
@@ -240,35 +244,53 @@ public:
 
 	
 	// my own integration routine for the r1, r2 integration
-	number_type integ_r(int m1, int l1, int m2, int l2, number_type phi)
+	number_type integ_r(int m1, int l1, int m2, int l2, number_type phi, size_type centrality_min)
 	{
-		size_type N = 25*2;
-		number_type width = (rMax_-0.2)/N;
 
-		// compute integral over r at fixed phi
-		// using trapezoidal rule
-		number_type result = 0;
-		for (size_type j = 0; j <= N; ++j) // loop over r
+		// do integral over impact param by two evaluations
+
+		number_type result_impact = 0;
+
+		for (size_type i = 0; i < 2; ++i) // integral over impact param
 		{
-			number_type r = (rMax_-0.2)*j/N;
-			number_type f = r*Bessel(m1, l1, r)*Bessel(m2, l2, r)*TwoPoint(r, phi);
-			// Use trapezoidal rule
-			if ((j == 0) || (j == N))
-			{
-				result += f/2;
-			}
-			else
-			{
-				result += f;
-			}
-		}
-		result *= width;
+			number_type b = b_percentiles_edges_[centrality_min+i];
+			number_type p = b_percentiles_prob_[centrality_min+i];
 
-		return result;
+			number_type integral_r = 0;
+			
+			// compute integral over r at fixed phi
+			// using trapezoidal rule
+			size_type N = 25*2;
+			number_type width = (rMax_-0.2)/N;
+			for (size_type j = 0; j <= N; ++j) // loop over r
+			{
+				number_type r = (rMax_-0.2)*j/N;
+				number_type f = p*r*Bessel(m1, l1, r)*Bessel(m2, l2, r)*TwoPoint(r, b, phi);
+	
+				if ((j == 0) || (j == N))
+				{
+					integral_r += f/2;
+				}
+				else
+				{
+					integral_r += f;
+				}
+			}
+			integral_r *= width;
+
+			result_impact += integral_r/2; // trapezoidal rule with N=2
+		}
+
+		result_impact *= (b_percentiles_edges_[centrality_min+1]-b_percentiles_edges_[centrality_min]);
+
+		result_impact *= 100.; // since we are integrating the prob density over a percentile
+	
+
+		return result_impact;
 	}
 
 	// compute structure coefficient B_{l1l2}^{m1,m2, m } as a function of m
-	void get_B(int l1, int l2, int m1, int m2, std::vector<number_type> & Bm)
+	void get_B(int l1, int l2, int m1, int m2, size_type centrality_min, std::vector<number_type> & Bm)
 	{
 		assert(Bm.size() == 0);
 		get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
@@ -284,7 +306,7 @@ public:
 		for (size_type i = 0; i < Nm_; ++i)
 		{
 			number_type phi = 2.* pi_ * i / Nm_;
-			fft[i] = integ_r(m1, l1, m2, l2, phi);
+			fft[i] = integ_r(m1, l1, m2, l2, phi, centrality_min);
 		}
 
 		gsl_fft_real_radix2_transform(fft, 1, Nm_);
@@ -316,41 +338,32 @@ public:
 	}
 
 	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
-	number_type TwoMode(int m1, int l1, int m2, int l2, size_type N = 1)
+	number_type TwoMode(int m1, int l1, int m2, int l2, size_type centrality_min)
 	{
 		get_Bessel_deriv_zeros(std::max(abs(m1), abs(m2))+1, std::max(l1, l2));
 		
-		// Compute result for various reaction plane angles and average over them
-		// (trapezoidal rule)
-		number_type angle_width = 2.*pi_/N;
-		number_type result = 0;
+		number_type result;
+			
+		std::vector<number_type> Bm(0);
+		get_B(l1, l2, m1, m2, centrality_min, Bm);
 
-		for (size_type i = 0; i < N; ++i) // I take care of i==N during i==0 (periodic boundary conditions)
+		// return real part of the result
+		int m = m1+m2;
+		if (m == 0)
 		{
-			set_reaction_plane_angle(angle_width*i);
-			std::vector<number_type> Bm(0);
-			get_B(l1, l2, m1, m2, Bm);
-
-			// return real part of the result
-			int m = m1+m2;
-			if (m == 0)
-			{
-				result += Bm[0];
-			}
-			else if (m > 0)
-			{
-				result += Bm[m];
-			}
-			else
-			{
-				result += Bm[-m];
-			}
+			result = Bm[0];
 		}
-		result *= angle_width;
-
-		// "result" is now the integral from 0 to 2pi. We want the average:
-		result /= (2.*pi_);
+		else if (m > 0)
+		{
+			result = Bm[m];
+		}
+		else
+		{
+			result = Bm[-m];
+		}
+		
 		return result;
+
 	}
 
 
@@ -375,9 +388,13 @@ private:
 	gsl_spline* rho_spline_;
 	gsl_interp_accel* rho_acc_;
 
+	// vector of percentile edges for impact parameter
+	std::vector<number_type> b_percentiles_edges_;
+	// corresponding probability density
+	std::vector<number_type> b_percentiles_prob_;
+
 	gsl_matrix* bessel_deriv_zeros_;
 
-	number_type reaction_angle_;
 };
 
 

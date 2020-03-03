@@ -9,10 +9,11 @@ g++ -std=c++11 -O2 -lgsl -o Saclay saclay.cpp
 
 #centrality_min=20
 #centrality_max=21
-m=1.4e-1 #1e-7 .. 1e-2, 2e-2 2.05e-2 2.09e-2
+m=5.0e-3 #1e-7 .. 1e-2, 2e-2 2.05e-2 2.09e-2
 #n_grid=10
 
-for centrality_min in $(seq 0 99)
+#for centrality_min in $(seq 0 99)
+for centrality_min in 20
 do
 	centrality_max=$((centrality_min+1))
 	centrality=$centrality_min"-"$centrality_max

@@ -19,7 +19,8 @@ g++ -std=c++11 -O2 -lgsl -o SaclaySimple saclay_simplified.cpp
 m=0.14
 Q0=1.24
 
-for centrality_min in $(seq 0 99)
+#for centrality_min in $(seq 0 99)
+for centrality_min in 0
 do
 	centrality_max=$((centrality_min+1))
 	centrality=$centrality_min"-"$centrality_max

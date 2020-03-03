@@ -145,7 +145,11 @@ public:
 	// getter for W(r) function
 	number_type W(number_type r)
 	{
-		return gsl_spline_eval(W_spline_, r, W_acc_);
+		if (r > 9.604)
+		{
+			return 0;
+		}
+		return abs(gsl_spline_eval(W_spline_, r, W_acc_));
 	}
 
 
@@ -202,7 +206,7 @@ public:
 	// }
 
 	// Define connected (!) position space two-point correlation function TwoPoint(x1, y1) = TwoPoint(x1, y1)*delta(x2-x1)*delta(y2-y1)
-	number_type TwoPoint(number_type x, number_type y)
+	number_type TwoPoint(number_type r, number_type b, number_type dPhi)
 	{
 	
 		number_type W0 = W(0);
@@ -211,17 +215,55 @@ public:
 
 
 		number_type R_cutoff = 0.010;
-		number_type r = sqrt(x*x+y*y);
-		number_type phi = atan2(y,x);
         if (r < R_cutoff)
         {
-        	x = R_cutoff*cos(phi);
-        	y = R_cutoff*sin(phi);	
+        	r = R_cutoff;
         }
 
-		return 2./pi_*hc*hc*W0*W0/Q0/Q0*pow((pi_*OnePoint(x, y)/W0),3./2)*log(Q0*Q0/m_/m_*sqrt(pi_*OnePoint(x, y)/W0));
+        number_type rM = sqrt(r*r + b*b/4 - b*r*cos(dPhi));
+        number_type rP = sqrt(r*r + b*b/4 + b*r*cos(dPhi));
+        number_type WM = W(rM);
+        number_type WP = W(rP);
+
+        // // DELETE AFTERWARDS
+        // number_type Wr = W(r);
+        // WP = Wr;
+        // WM = Wr;
+
+        if (rM > 9.604 || rP > 9.604)
+		{
+			return 0;
+		}
+
+		return 1./pi_*hc*hc*W0*W0/Q0/Q0*sqrt(WM*WP/W0/W0)*(sqrt(WM/W0)*log(Q0*Q0/m_/m_*sqrt(WP/W0)) + sqrt(WP/W0)*log(Q0*Q0/m_/m_*sqrt(WM/W0)));
 		
-	}
+	}	
+
+
+
+
+
+
+	// number_type TwoPoint(number_type x, number_type y)
+	// {
+	
+	// 	number_type W0 = W(0);
+	// 	number_type Q0 = Q0_; //GeV
+	// 	number_type hc = 0.197327;
+
+
+	// 	number_type R_cutoff = 0.010;
+	// 	number_type r = sqrt(x*x+y*y);
+	// 	number_type phi = atan2(y,x);
+ //        if (r < R_cutoff)
+ //        {
+ //        	x = R_cutoff*cos(phi);
+ //        	y = R_cutoff*sin(phi);	
+ //        }
+
+	// 	return 2./pi_*hc*hc*W0*W0/Q0/Q0*pow((pi_*OnePoint(x, y)/W0),3./2)*log(Q0*Q0/m_/m_*sqrt(pi_*OnePoint(x, y)/W0));
+		
+	// }
 
 private:
 

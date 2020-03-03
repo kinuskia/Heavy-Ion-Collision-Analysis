@@ -40,6 +40,8 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 	FBDecomposition<number_type> decomposition(model, 9.604+0*1.*8.604);
 	decomposition.initialize();
 
+	decomposition.get_impact_parameter_distribution("../impact_param_from_thickness/percentiles.txt");
+
 	// set number of radial grid points per dimension
 	decomposition.set_N_discret(n_grid);
 
@@ -60,6 +62,7 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 	// number_type current = decomposition.TwoMode_fast(1, 9, -1, 9);
 	// std::cout << current << "\n";
 	
+
 
 	for (int m = mMax; m >= 0; --m) 
 	{
@@ -102,7 +105,7 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 					std::cout << "Computation time in min: " << expected_duration << "\n";
 					estimate_given = true;
 				}
-				number_type current = decomposition.TwoMode_fast2(m, l1, -m, l2);	
+				number_type current = decomposition.TwoMode_fast2(m, l1, -m, l2, centrality_min);	
 				gsl_matrix_set(result, l1-1, l2-1, current);
 
 				// // make use of symmetry

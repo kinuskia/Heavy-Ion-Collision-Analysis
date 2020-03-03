@@ -43,31 +43,31 @@ for mode in modes:
 	# import CGC simple profiles
 	source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 	profile = np.loadtxt(source)
-	# add geometry part
-	source_one_point = 'output/one_point_'+centrality_class+'.txt'
-	one_points = np.loadtxt(source_one_point)
-	for i in range(0, lMax):
-		for j in range(0, lMax):
-			if ((i==0)&(j==0)&(mode==0)):
-				profile[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
-			else:
-				profile[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
+	# # add geometry part
+	# source_one_point = 'output/one_point_'+centrality_class+'.txt'
+	# one_points = np.loadtxt(source_one_point)
+	# for i in range(0, lMax):
+	# 	for j in range(0, lMax):
+	# 		if ((i==0)&(j==0)&(mode==0)):
+	# 			profile[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
+	# 		else:
+	# 			profile[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
 					
 	current_max_CGC = max(np.amax(profile[:lMax,:lMax]), -np.amin(profile[:lMax,:lMax]))
 	if (current_max_CGC > maximal_value_CGC):
 		maximal_value_CGC = current_max_CGC
 	#import Large_Nc profile
-	source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m1.4e-1/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+	source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m1.0e-2/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 	profile = np.loadtxt(source)
-	# add geometry part
-	source_one_point = 'output/one_point_'+centrality_class+'.txt'
-	one_points = np.loadtxt(source_one_point)
-	for i in range(0, lMax):
-		for j in range(0, lMax):
-			if ((i==0)&(j==0)&(mode==0)):
-				profile[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
-			else:
-				profile[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
+	# # add geometry part
+	# source_one_point = 'output/one_point_'+centrality_class+'.txt'
+	# one_points = np.loadtxt(source_one_point)
+	# for i in range(0, lMax):
+	# 	for j in range(0, lMax):
+	# 		if ((i==0)&(j==0)&(mode==0)):
+	# 			profile[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
+	# 		else:
+	# 			profile[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
 
 	current_max_Nc = max(np.amax(profile[:lMax,:lMax]), -np.amin(profile[:lMax,:lMax]))
 	if (current_max_Nc > maximal_value_Nc):
@@ -163,17 +163,17 @@ for mode in modes:
 # plot Saclay diagrams
 for mode in modes:
 	#import two-point functions
-	source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m1.4e-1/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+	source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m1.0e-2/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 	profile = np.loadtxt(source)
-	# add geometry part
-	source_one_point = 'output/one_point_'+centrality_class+'.txt'
-	one_points = np.loadtxt(source_one_point)
-	for i in range(0, lMax):
-		for j in range(0, lMax):
-			if ((i==0)&(j==0)&(mode==0)):
-				profile[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
-			else:
-				profile[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
+	# # add geometry part
+	# source_one_point = 'output/one_point_'+centrality_class+'.txt'
+	# one_points = np.loadtxt(source_one_point)
+	# for i in range(0, lMax):
+	# 	for j in range(0, lMax):
+	# 		if ((i==0)&(j==0)&(mode==0)):
+	# 			profile[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
+	# 		else:
+	# 			profile[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
 
 	axs[1][mode].imshow(profile[0:(lMax),0:(lMax)], interpolation=None, cmap=cmap_LargeNc, vmin = -maximal_N, vmax = maximal_N, extent = (-0.5+1, len(profile[0,0:(lMax)])-0.5+1, len(profile[0:(lMax),0])-0.5+1, -0.5+1))
 	#centrality_class =  str(p) + '-' + str(p+1) + '%'
@@ -249,15 +249,15 @@ for mode in modes:
 	#import two-point functions
 	source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 	profile = np.loadtxt(source)
-	# add geometry part
-	source_one_point = 'output/one_point_'+centrality_class+'.txt'
-	one_points = np.loadtxt(source_one_point)
-	for i in range(0, lMax):
-		for j in range(0, lMax):
-			if ((i==0)&(j==0)&(mode==0)):
-				profile[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
-			else:
-				profile[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
+	# # add geometry part
+	# source_one_point = 'output/one_point_'+centrality_class+'.txt'
+	# one_points = np.loadtxt(source_one_point)
+	# for i in range(0, lMax):
+	# 	for j in range(0, lMax):
+	# 		if ((i==0)&(j==0)&(mode==0)):
+	# 			profile[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
+	# 		else:
+	# 			profile[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
 
 	axs[3][mode].imshow(profile[0:(lMax),0:(lMax)], interpolation=None, cmap=cmap_magma, vmin = -maximal_C, vmax = maximal_C, extent = (-0.5+1, len(profile[0,0:(lMax)])-0.5+1, len(profile[0:(lMax),0])-0.5+1, -0.5+1))
 	#centrality_class =  str(p) + '-' + str(p+1) + '%'
