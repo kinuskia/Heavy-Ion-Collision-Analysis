@@ -21,6 +21,24 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	// Read in and pre-process Trento data
 	Collision<number_type> PbPb(10, .2); // Create Collision object
 
+	
+	size_type lMax = 20; 
+	size_type mMax = 10;
+
+	// Compute clm values
+	PbPb.get_Bessel_deriv_zeros(mMax+1, lMax+1);
+	gsl_matrix* clm = gsl_matrix_alloc(lMax, mMax +1);
+	for (size_type l = 1; l<= lMax ; ++l)
+	{
+		for (size_type m = 0; m <= mMax; ++m)
+		{
+			gsl_matrix_set(clm, l-1, m, PbPb.c(m, l));
+		}
+	}
+	to_file("output/clm.txt", clm);
+
+	//PbPb.print_Bessel_deriv_zeros(mMax, lMax, "output/bessel_d_0.txt");
+
 	PbPb.read_in(filename, fileformat, n_files, 4./3); // read in Trento event files + convert to energy density
 
 	//PbPb.normalize(1); // normalize events so that integral = 1
@@ -125,8 +143,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 		std::string outfile_modulus = "output/one_point_" + centrality_class;
 		//outfile_modulus += "_modulus";
 		outfile_modulus += ".txt";
-		size_type lMax = 10;
-		size_type mMax = 10;
+		//size_type lMax = 20;
+		//size_type mMax = 10;
 
 		complex_matrix<number_type> OnePointFunction(mMax+1, lMax);
 		complex_matrix<number_type> OnePointFunction_err(mMax+1, lMax);
@@ -165,21 +183,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	}
 
-	// Compute clm values
-	size_type lMax = 20; 
-	size_type mMax = 10;
-	PbPb.get_Bessel_deriv_zeros(mMax+1, lMax+1);
-	gsl_matrix* clm = gsl_matrix_alloc(lMax, mMax +1);
-	for (size_type l = 1; l<= lMax ; ++l)
-	{
-		for (size_type m = 0; m <= mMax; ++m)
-		{
-			gsl_matrix_set(clm, l-1, m, PbPb.c(m, l));
-		}
-	}
-	to_file("output/clm.txt", clm);
-
-	PbPb.print_Bessel_deriv_zeros(10, 5, "output/bessel_d_0.txt");
+	
 
 
 

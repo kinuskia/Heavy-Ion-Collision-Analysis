@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 modes = [0, 1, 2, 3, 4]
-centrality = np.arange(45)
+centrality = np.arange(95)
 lMax = 5
 
 colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
@@ -35,17 +35,17 @@ for mm in range(0, len(modes)):
 
 
 		###### Get Large Nc
-		source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m1.4e-1/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+		source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m5.0e-3/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 		profile_largeNc = np.loadtxt(source)
-		# add geometry part
-		source_one_point = 'output/one_point_'+centrality_class+'.txt'
-		one_points = np.loadtxt(source_one_point)
-		for i in range(0, lMax):
-			for j in range(0, lMax):
-				if ((i==0)&(j==0)&(mode==0)):
-					profile_largeNc[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
-				else:
-					profile_largeNc[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
+		# # add geometry part
+		# source_one_point = 'output/one_point_'+centrality_class+'.txt'
+		# one_points = np.loadtxt(source_one_point)
+		# for i in range(0, lMax):
+		# 	for j in range(0, lMax):
+		# 		if ((i==0)&(j==0)&(mode==0)):
+		# 			profile_largeNc[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
+		# 		else:
+		# 			profile_largeNc[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
 
 
 		###### Get IPSM
@@ -78,15 +78,15 @@ for mm in range(0, len(modes)):
 		###### Get magma
 		source = 'Saclay_simplified/output/'+centrality_class+'/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 		profile_magma = np.loadtxt(source)
-		# add geometry part
-		source_one_point = 'output/one_point_'+centrality_class+'.txt'
-		one_points = np.loadtxt(source_one_point)
-		for i in range(0, lMax):
-			for j in range(0, lMax):
-				if ((i==0)&(j==0)&(mode==0)):
-					profile_magma[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
-				else:
-					profile_magma[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
+		# # add geometry part
+		# source_one_point = 'output/one_point_'+centrality_class+'.txt'
+		# one_points = np.loadtxt(source_one_point)
+		# for i in range(0, lMax):
+		# 	for j in range(0, lMax):
+		# 		if ((i==0)&(j==0)&(mode==0)):
+		# 			profile_magma[i][j] += 1./np.pi/np.pi*(sn2_N_N2)
+		# 		else:
+		# 			profile_magma[i][j] += (1.+sn2_N_N2)*one_points[mode, i]*one_points[mode, j]
 
 
 		###### Compute chi entries
@@ -121,7 +121,7 @@ for mm in range(0, len(modes)):
 	#axs[mm].legend(loc="best")
 	axs[mm].set_xlabel("Centrality %")
 	axs[mm].set_title("$m={0}$".format(mode))
-	axs[mm].set_xticks([0,10,20,30,40])
+	axs[mm].set_xticks([0,20,40,60,80])
 
 handles, labels = axs[-1].get_legend_handles_labels()
 figs.legend(handles, labels,loc='lower center', bbox_to_anchor=(0.45, -0.04), ncol=5, frameon=False)

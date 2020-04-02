@@ -23,9 +23,13 @@ public:
 	typedef REAL number_type;
 
 	// constructor
-	Model(number_type m)
+	Model(number_type m, number_type R, number_type a, number_type w)
 	: m_(m)
 	, pi_(3.1415926)
+	, R_(R)
+	, a_(a)
+	, w_(w)
+	, rho0_(1)
 	// , gridmax_(10)
 	// , gridstep_(0.2)
 	{}
@@ -149,7 +153,7 @@ public:
 	// getter for W(r) function
 	number_type W(number_type r)
 	{
-		if (r > 9.604)
+		if (r > 9.35698)
 		{
 			return 0;
 		}
@@ -163,11 +167,14 @@ public:
 
 	// Define one-point position space correlation function
 	// units in fm
-	number_type OnePoint(number_type x, number_type y)
+	number_type OnePoint(number_type x, number_type y, number_type b)
 	{
-		number_type R = sqrt(x*x+y*y);
-		
-		return OnePoint(R);
+		number_type phiR = 0;
+		number_type r = sqrt(x*x +y*y);
+		number_type phi = atan2(y, x);
+		number_type rP = sqrt(r*r + b*b/4 + b*r*cos(phi-phiR));
+		number_type rM = sqrt(r*r + b*b/4 - b*r*cos(phi-phiR));
+		return T_spline(rP)*T_spline(rM);
 		// number_type result = gsl_spline2d_eval(OnePoint_spline_, x, y, xacc_, yacc_);
 		// if (result < 0)
 		// {
@@ -177,6 +184,92 @@ public:
 		// return result;
 
 	}
+
+	// Define Woods-Saxon profile
+	number_type rho(number_type r)
+	{
+		return rho0_*(1.+w_*r*r/R_/R_)/(1.+exp((r-R_)/a_));
+	}
+
+	// Woods-Saxon in cylindrical coords
+	number_type rho(number_type r, number_type z)
+	{
+		return rho(sqrt(r*r + z*z));
+	}
+
+	// Compute One-Nucleus thickness function
+	number_type T(number_type r)
+	{
+		// integrate over z-coordinate (trapezoidal rule)
+		number_type result = 0;
+		size_type Nz = 20;
+		number_type zmax = 2.*R_;
+		for (size_type i = 0; i <= Nz; ++i)
+		{
+			number_type z = zmax*i/Nz;
+			number_type f = 2.*rho(r, z);
+			if ((i==0) || (i==Nz))
+			{
+				result += f/2;
+			}
+			else
+			{
+				result += f;
+			}
+		}
+		result *= zmax/Nz;
+
+		return result;
+	}
+
+	// Compute T(r) from spline (fast!)
+	number_type T_spline(number_type r)
+	{
+		if (r > 1.9*R_)
+		{
+			return 0;
+		}
+
+		return gsl_spline_eval(T_spline_, r, T_acc_);
+	}
+
+	// set rho0 such that T(0) = 1
+	void set_rho0 ()
+	{
+		rho0_ = 1./T(0.);
+	}
+
+	// initialize T(r) function
+	void initialize_T()
+	{
+		set_rho0();
+		number_type* T_sites;
+		number_type* r_sites;
+		
+		size_type Nr = 100;
+
+		T_sites = new number_type[Nr];
+		r_sites = new number_type[Nr];
+
+		for (size_type i = 0; i < Nr; ++i)
+		{
+			number_type r = 2.*R_*i/Nr;
+			r_sites[i] = r;
+			T_sites[i] = T(r);
+		}
+
+		//  Generate a spline
+	
+		const gsl_interp_type* interpolator = gsl_interp_cspline;
+		gsl_spline* spline = gsl_spline_alloc(interpolator, Nr);
+		gsl_interp_accel* acc = gsl_interp_accel_alloc();
+
+		T_interpolator_ = interpolator;
+		T_spline_ = spline;
+		T_acc_ = acc;
+		gsl_spline_init(T_spline_, r_sites, T_sites, Nr);
+	}
+
 
 	number_type TwoPoint(number_type r1, number_type r2, number_type b, number_type phiA, number_type phiB)
 	{
@@ -269,8 +362,10 @@ public:
 
 		//number_type Q2 = Q0*Q0*sqrt(pi_*OnePoint(R/2)/W0);
 
-		number_type Q2P = Q0*Q0*sqrt(pi_*OnePoint(RP/2)/W0);
-		number_type Q2M = Q0*Q0*sqrt(pi_*OnePoint(RM/2)/W0);
+		//number_type Q2P = Q0*Q0*sqrt(pi_*OnePoint(RP/2)/W0);
+		number_type Q2P = Q0*Q0*T_spline(RP/2);
+		//number_type Q2M = Q0*Q0*sqrt(pi_*OnePoint(RM/2)/W0);
+		number_type Q2M = Q0*Q0*T_spline(RM/2);
 
 
        
@@ -340,13 +435,13 @@ public:
 
 	number_type Large_Nc_raw(number_type r, number_type infrared_Regulator, number_type Qs2barM, number_type Qs2barP, number_type scale, number_type coupling)
 	{
+		number_type nc = 3;
 		number_type modifiedGamma =  (1./(2.*pi_*infrared_Regulator*infrared_Regulator) -r/(2.*pi_*infrared_Regulator ) *gsl_sf_bessel_K1(r*infrared_Regulator))/(log(4./(infrared_Regulator*infrared_Regulator*r*r))) ;
 		//number_type Qs2=pi_*8.*modifiedGamma*Qs2bar;
-		number_type Qs2P = pi_*8.*modifiedGamma*Qs2barP;
-       	number_type Qs2M = pi_*8.*modifiedGamma*Qs2barM;
+		number_type Qs2P = coupling*coupling/4./pi_*nc * pi_*8.*modifiedGamma*Qs2barP;
+       	number_type Qs2M = coupling*coupling/4./pi_*nc * pi_*8.*modifiedGamma*Qs2barM;
 		//number_type modifiedGamma =  (1./(2.*pi_*infrared_Regulator*infrared_Regulator) -r/(2.*pi_*infrared_Regulator ) *gsl_sf_bessel_K1(r*infrared_Regulator))/(log(4./(infrared_Regulator*infrared_Regulator*r*r))) ;
 		number_type result0 = 0;
-		number_type nc = 3;
 		number_type Qs2 = Qs2P;
 		number_type Qs2bar = Qs2barM;
 		//result0  = (2./(pow(coupling,4.)*pow(r,8.))*(16.*exp(-Qs2)+32.*exp(-Qs2/2.)-64*exp(-3.*Qs2/4)-4.*exp(-1./4.*Qs2)*(Qs2*Qs2-2.*Qs2bar*Qs2bar*pow(r,4.)+8.*Qs2+48)+1./8.*exp(-Qs2/2)*(Qs2*Qs2*Qs2*Qs2+(4.*Qs2*Qs2+128.)*(2.*Qs2)+16.*(2.*Qs2)*(2.*Qs2)+1024.)+2.*(Qs2bar*Qs2bar*pow(r,4.)*(Qs2-4.)+40.)))/scale/scale;
@@ -367,12 +462,22 @@ private:
 	gsl_spline* W_spline_;
 	gsl_interp_accel* W_acc_;
 
+	const gsl_interp_type* T_interpolator_;
+	gsl_spline* T_spline_;
+	gsl_interp_accel* T_acc_;
+
 	// const gsl_interp2d_type* OnePoint_interpolator_;
 	// gsl_spline2d* OnePoint_spline_;
 	// gsl_interp_accel* xacc_;
 	// gsl_interp_accel* yacc_;
 	// number_type gridmax_;
 	// number_type gridstep_;
+
+	// woods saxon profile
+	number_type R_;
+	number_type a_;
+	number_type w_;
+	number_type rho0_;
 
 	number_type pi_;
 	//

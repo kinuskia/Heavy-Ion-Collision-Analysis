@@ -135,6 +135,8 @@ public:
 		return integral;
 	}
 
+
+
 	// Identify edges of centrality classes
 	void get_edges(std::vector<number_type> & edges)
 	{
@@ -278,9 +280,28 @@ int main (int argc, char* argv[]) // command-line input:  filename_begin, filefo
 
 
 
-	//imapct parameter
-	PbPb.histogram_b("output/b_hist.txt", n_bins, true); // normed = true/false
+	//impact parameter
+	std::vector<number_type> impact_params(n_bins);
+	std::vector<number_type> prob_impact(n_bins);
+	std::vector<number_type> prob_error_impact(n_bins);
+	PbPb.histogram_b("output/b_hist.txt", n_bins , impact_params, prob_impact, prob_error_impact, true); // normed = true/false
+	// Initialize distribution manager
+	MultDist<number_type> impactdist(impact_params, prob_impact);
+	// Identify centrality intervals
+	std::vector<number_type> edges_impact(101);
+	std::vector<number_type> edges_prob(101);
+	impactdist.get_edges(edges_impact);
 
-	
+	for (size_type i = 0; i < edges_prob.size(); ++i)
+	{
+		edges_prob[i] = impactdist.evaluate(edges_impact[i]);
+	}
+
+	std::vector<std::vector<number_type>> output_impact(2);
+	output_impact[0] = edges_impact;
+	output_impact[1] = edges_prob;
+
+	to_file("output/percentiles_b.txt", output_impact);
+
 	return 0;
 }

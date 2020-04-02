@@ -30,17 +30,18 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 	std::string centrality = std::to_string(centrality_min) + "-" + std::to_string(centrality_max);
 
 	// Set up initial-state model
-	Model<number_type> model(m_IR);
-	model.initialize_W("../output/weight_functions_"+centrality+".txt");
+	Model<number_type> model(m_IR, 6.624, 0.549, 0.);
+	model.initialize_W("../Saclay_simplified/output/"+centrality+"/weight_functions_magma_"+centrality+".txt");
+	model.initialize_T();
 	// const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
 	// model.initialize_OnePoint("../output/profiles_averaged_"+centrality+".txt", 100, xy_interpolation_method, 10, 0.2);
 
 	// Set up Fourier-Bessel decomposition object
 	// with rMax = 10 as maximal radial integration length
-	FBDecomposition<number_type> decomposition(model, 9.604+0*1.*8.604);
+	FBDecomposition<number_type> decomposition(model, 9.604+0*1.*8.604, centrality_min);
+	
+	decomposition.get_impact_parameter_distribution("../output/percentiles_b.txt");
 	decomposition.initialize();
-
-	decomposition.get_impact_parameter_distribution("../impact_param_from_thickness/percentiles.txt");
 
 	// set number of radial grid points per dimension
 	decomposition.set_N_discret(n_grid);
@@ -48,10 +49,12 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 	// set # gridpoints for FFT
 	decomposition.set_Nm_(n_azim);
 
-
+	
 	// Compute <e_l1^(m)e_l2^(-m)> as a function of l
-	int mMax = 4;
-	int lMax = 10;
+	int mMax = 10; //4
+	int lMax = 20; //10
+	decomposition.fill_background_bar_for(mMax, lMax);
+	decomposition.print_background_bar(destination + "/background_coeffs_CGC_" + centrality + ".txt");
 	number_type counter = 0;
 	number_type progress_steps = 100;
 
@@ -76,16 +79,23 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 		{
 			for (int l2 = 1; l2 <= lMax; ++l2)
 			{
+				// ///////////////////////////////////////////////////////
+				// if ( (m <= 4) && (l1 < 10 && l2 < 10) )
+				// {
+				// 	gsl_matrix_set(result, l1-1, l2-1, 0.0);
+				// 	continue;
+				// }
+				// ///////////////////////////////////////////////////////
 				// if (l1 != l2)
 				// {
 				// 	gsl_matrix_set(result, l1-1, l2-1, 0.0);
 				// 	continue;
 				// }
 
-				// if (l1 > l2)
-				// {
-				// 	continue;
-				// }
+				if (l1 > l2) // make use of symmetry
+				{
+					continue;
+				}
 
 				std::cout << "m=" << m << ", l1= " << l1 << ", l2=" << l2 << "\n";
 				// Print progress
@@ -108,8 +118,8 @@ int main (int argc, char* argv[]) // comand-line input: centrality_min, centrali
 				number_type current = decomposition.TwoMode_fast2(m, l1, -m, l2, centrality_min);	
 				gsl_matrix_set(result, l1-1, l2-1, current);
 
-				// // make use of symmetry
-				// gsl_matrix_set(result, l2-1, l1-1, current);
+				// make use of symmetry
+				gsl_matrix_set(result, l2-1, l1-1, current);
 
 				counter++;
 			}

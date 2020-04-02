@@ -13,7 +13,7 @@ clm = np.loadtxt("output/clm.txt")
 for l in radials:
 	for mode in modes:
 		# compute G_1^(mode) for each model as a function of centrality
-		percentiles = np.arange(45)
+		percentiles = np.arange(95)
 		G_IPSM = np.zeros(len(percentiles))
 		G_Trento = np.zeros(len(percentiles))
 		G_LargeNc = np.zeros(len(percentiles))
@@ -27,7 +27,7 @@ for l in radials:
 			filename_trento = "output/two_point_random_" + centrality_class + "_m" + str(mode) + "_real.txt"
 			filename_trento_one = 'output/one_point_' + centrality_class +'.txt'
 			filename_Saclay_simple = "Saclay_simplified/output/"+centrality_class+"/two_point_random_connected_m_" + str(mode) + ".txt"
-			filename_Saclay = "Saclay/output/"+centrality_class+"/Nr41/Nm64/m1.4e-1/two_point_random_connected_m_" + str(mode) + ".txt"
+			filename_Saclay = "Saclay/output/"+centrality_class+"/Nr41/Nm64/m5.0e-3/two_point_random_connected_m_" + str(mode) + ".txt"
 			filename_fit = "../IPSM-Fit/output/" + centrality_class + ".txt"
 			One_sw2_N, sn2_N_N2 = np.loadtxt(filename_fit, unpack=True)
 
@@ -36,14 +36,14 @@ for l in radials:
 			saclay_simple = np.loadtxt(filename_Saclay_simple)
 			saclay = np.loadtxt(filename_Saclay)
 
-			for i in range(0, len(saclay[:,0])):
-				for j in range(0, len(saclay[:,0])):
-					if ((i==0)&(j==0)&(mode==0)):
-						saclay_simple[i][j] += 1./np.pi/np.pi*sn2_N_N2
-						saclay[i][j] += 1./np.pi/np.pi*sn2_N_N2
-					else:
-						saclay_simple[i][j] += (1.+ sn2_N_N2 )*one_points[mode, i]*one_points[mode, j]
-						saclay[i][j] += (1. + sn2_N_N2 )*one_points[mode, i]*one_points[mode, j]
+			# for i in range(0, len(saclay[:,0])):
+			# 	for j in range(0, len(saclay[:,0])):
+			# 		if ((i==0)&(j==0)&(mode==0)):
+			# 			saclay_simple[i][j] += 1./np.pi/np.pi*sn2_N_N2
+			# 			saclay[i][j] += 1./np.pi/np.pi*sn2_N_N2
+			# 		else:
+			# 			saclay_simple[i][j] += (1.+ sn2_N_N2 )*one_points[mode, i]*one_points[mode, j]
+			# 			saclay[i][j] += (1. + sn2_N_N2 )*one_points[mode, i]*one_points[mode, j]
 
 			## compute correlators
 			if (mode == 0):
@@ -65,7 +65,13 @@ for l in radials:
 		axs[l-1][mode].plot(percentiles, np.abs(G_Trento),color = colors[1], label="TrENTo")
 		axs[l-1][mode].plot(percentiles, np.abs(G_LargeNc),color = colors[2], label="CGC large-$N_c$")
 		axs[l-1][mode].plot(percentiles, np.abs(G_magma),color = colors[3], label="magma")
-		axs[l-1][mode].set_xticks([0,10,20,30,40])
+		axs[l-1][mode].set_xticks([0,20,40,60,80])
+		if (l==1):
+			axs[l-1][mode].set_ylim(ymin=-0.02, ymax=0.10)
+		elif (l==2):
+			axs[l-1][mode].set_ylim(ymin=-0.005, ymax=0.05)
+		else:
+			axs[l-1][mode].set_ylim(ymin=-0.005, ymax=0.05)
 		#axs[l-1][mode].set_xticks([10,30,50,70])
 		#axs[l-1][mode].annotate(" \n$|G_"+str(l)+"^{("+str(mode)+")}|$",xy=(5,0.05))
 		#axs[l-1][mode].set_yscale("log")

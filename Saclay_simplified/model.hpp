@@ -7,6 +7,8 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_spline2d.h>
 #include "../auxiliary/read_data.hpp"
+#include <vector>
+#include "../auxiliary/to_file.hpp"
 
 #include <fstream>
 
@@ -18,12 +20,16 @@ public:
 	typedef REAL number_type;
 
 	// constructor
-	Model(number_type m, number_type Q0)
+	Model(number_type m, number_type Q0, number_type R, number_type a, number_type w)
 	: m_(m)
 	, Q0_(Q0)
 	, pi_(3.1415926)
 	, gridmax_(10)
 	, gridstep_(0.2)
+	, R_(R)
+	, a_(a)
+	, w_(w)
+	, rho0_(1)
 	{}
 
 	// // initialize One-Point function
@@ -145,7 +151,7 @@ public:
 	// getter for W(r) function
 	number_type W(number_type r)
 	{
-		if (r > 9.604)
+		if (r > 9.35698)
 		{
 			return 0;
 		}
@@ -157,10 +163,14 @@ public:
 
 	// Define one-point position space correlation function
 	// units in fm
-	number_type OnePoint(number_type x, number_type y)
+	number_type OnePoint(number_type x, number_type y, number_type b)
 	{
-		number_type r = sqrt(x*x+y*y);
-		return W(r)/pi_;
+		number_type phiR = 0;
+		number_type r = sqrt(x*x +y*y);
+		number_type phi = atan2(y, x);
+		number_type rP = sqrt(r*r + b*b/4 + b*r*cos(phi-phiR));
+		number_type rM = sqrt(r*r + b*b/4 - b*r*cos(phi-phiR));
+		return T_spline(rP)*T_spline(rM);
 		// number_type result = gsl_spline2d_eval(OnePoint_spline_, x, y, xacc_, yacc_);
 		// if (result < 0)
 		// {
@@ -169,6 +179,108 @@ public:
 
 		// return result;
 
+	}
+
+	// Define Woods-Saxon profile
+	number_type rho(number_type r)
+	{
+		return rho0_*(1.+w_*r*r/R_/R_)/(1.+exp((r-R_)/a_));
+	}
+
+	// Woods-Saxon in cylindrical coords
+	number_type rho(number_type r, number_type z)
+	{
+		return rho(sqrt(r*r + z*z));
+	}
+
+	// Compute One-Nucleus thickness function
+	number_type T(number_type r)
+	{
+		// integrate over z-coordinate (trapezoidal rule)
+		number_type result = 0;
+		size_type Nz = 20;
+		number_type zmax = 2.*R_;
+		for (size_type i = 0; i <= Nz; ++i)
+		{
+			number_type z = zmax*i/Nz;
+			number_type f = 2.*rho(r, z);
+			if ((i==0) || (i==Nz))
+			{
+				result += f/2;
+			}
+			else
+			{
+				result += f;
+			}
+		}
+		result *= zmax/Nz;
+
+		return result;
+	}
+
+	// Compute T(r) from spline (fast!)
+	number_type T_spline(number_type r)
+	{
+		if (r > 1.9*R_)
+		{
+			return 0;
+		}
+
+		return gsl_spline_eval(T_spline_, r, T_acc_);
+	}
+
+	// set rho0 such that T(0) = 1
+	void set_rho0 ()
+	{
+		rho0_ = 1./T(0.);
+	}
+
+	// initialize T(r) function
+	void initialize_T()
+	{
+		set_rho0();
+		number_type* T_sites;
+		number_type* r_sites;
+		
+		size_type Nr = 100;
+
+		T_sites = new number_type[Nr];
+		r_sites = new number_type[Nr];
+
+		for (size_type i = 0; i < Nr; ++i)
+		{
+			number_type r = 2.*R_*i/Nr;
+			r_sites[i] = r;
+			T_sites[i] = T(r);
+		}
+
+		//  Generate a spline
+	
+		const gsl_interp_type* interpolator = gsl_interp_cspline;
+		gsl_spline* spline = gsl_spline_alloc(interpolator, Nr);
+		gsl_interp_accel* acc = gsl_interp_accel_alloc();
+
+		T_interpolator_ = interpolator;
+		T_spline_ = spline;
+		T_acc_ = acc;
+		gsl_spline_init(T_spline_, r_sites, T_sites, Nr);
+	}
+
+	// print thickness function to file
+	void print_T(std::string filename)
+	{
+		std::vector<std::vector<number_type>> output(3);
+		size_type N = 100;
+		number_type rmax = 2.*R_;
+		for (size_type i = 0; i < N; ++i)
+		{
+			number_type r = rmax*i/N;
+			output[0].push_back(r);
+			output[1].push_back(T(r));
+			output[2].push_back(sqrt(W(r)/W(0)));
+		}
+
+		to_file(filename, output);
 	}
 
 
@@ -215,27 +327,32 @@ public:
 
 
 		number_type R_cutoff = 0.010;
-        if (r < R_cutoff)
-        {
-        	r = R_cutoff;
-        }
+        // if (r < R_cutoff)
+        // {
+        // 	r = R_cutoff;
+        // }
 
         number_type rM = sqrt(r*r + b*b/4 - b*r*cos(dPhi));
         number_type rP = sqrt(r*r + b*b/4 + b*r*cos(dPhi));
-        number_type WM = W(rM);
-        number_type WP = W(rP);
+        //number_type WM = W(rM);
+        //number_type WP = W(rP);
+
+        number_type TM = T_spline(rM);
+        number_type TP = T_spline(rP);
 
         // // DELETE AFTERWARDS
         // number_type Wr = W(r);
         // WP = Wr;
         // WM = Wr;
 
-        if (rM > 9.604 || rP > 9.604)
+        if (rM > 1.9*R_ || rP > 1.9*R_)
 		{
 			return 0;
 		}
 
-		return 1./pi_*hc*hc*W0*W0/Q0/Q0*sqrt(WM*WP/W0/W0)*(sqrt(WM/W0)*log(Q0*Q0/m_/m_*sqrt(WP/W0)) + sqrt(WP/W0)*log(Q0*Q0/m_/m_*sqrt(WM/W0)));
+		return 1./pi_*hc*hc*W0*W0/Q0/Q0*TM*TP*(TM*log(Q0*Q0/m_/m_*TP) + TP*log(Q0*Q0/m_/m_*TM));
+
+		//return 1./pi_*hc*hc*W0*W0/Q0/Q0*sqrt(WM*WP/W0/W0)*(sqrt(WM/W0)*log(Q0*Q0/m_/m_*sqrt(WP/W0)) + sqrt(WP/W0)*log(Q0*Q0/m_/m_*sqrt(WM/W0)));
 		
 	}	
 
@@ -274,8 +391,19 @@ private:
 	const gsl_interp_type* W_interpolator_;
 	gsl_spline* W_spline_;
 	gsl_interp_accel* W_acc_;
+
+	const gsl_interp_type* T_interpolator_;
+	gsl_spline* T_spline_;
+	gsl_interp_accel* T_acc_;
+
 	number_type gridmax_;
 	number_type gridstep_;
+
+	// woods saxon profile
+	number_type R_;
+	number_type a_;
+	number_type w_;
+	number_type rho0_;
 	
 
 	//

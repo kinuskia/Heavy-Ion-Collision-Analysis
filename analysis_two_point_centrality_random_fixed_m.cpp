@@ -120,7 +120,11 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	number_type max_rel_error = -1.0; // variable to keep track of current relative error
 
-	for (int m = 0; m < 5; ++m)
+	size_type mMax = 10;
+	size_type lMax = 20;
+
+
+	for (int m = 0; m <= mMax; ++m)
 	{
 		for (int c = 1; c < classes.size(); ++c)
 		{
@@ -134,7 +138,6 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 			std::string outfile_modulus_err = outfile_modulus;
 			outfile_modulus_err += "_error.txt";
 			outfile_modulus += ".txt";
-			size_type lMax = 10;
 
 			complex_matrix<number_type> TwoPointFunction(lMax, lMax);
 			complex_matrix<number_type> TwoPointFunction_err(lMax, lMax);

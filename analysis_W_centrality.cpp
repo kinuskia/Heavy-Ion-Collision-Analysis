@@ -52,7 +52,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	PbPb.getNormalizations();
 
 	// print weighting functions W
-	PbPb.print_W("output/weight_functions_test", false);
+	PbPb.print_W_all("output/weight_functions_test", false);
 
 	// Print file with the following columns: impact parameter, number of participants, multiplicity
 	PbPb.collision_specs_to_file("output/collision_specs.txt");

@@ -13,7 +13,7 @@ m=5.0e-3 #1e-7 .. 1e-2, 2e-2 2.05e-2 2.09e-2
 #n_grid=10
 
 #for centrality_min in $(seq 0 99)
-for centrality_min in 20
+for centrality_min in 0 20
 do
 	centrality_max=$((centrality_min+1))
 	centrality=$centrality_min"-"$centrality_max

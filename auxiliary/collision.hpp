@@ -310,7 +310,7 @@ public:
 	}
 
 	// compute histogram data points of impact parameters
-	void histogram_b(std::string filename, size_type N_bins, bool normed)
+	void histogram_b(std::string filename, size_type N_bins, std::vector<number_type> & x, std::vector<number_type> & y, std::vector<number_type> & dy, bool normed)
 	{
 		// create edges and bin vector
 		std::vector<std::size_t> frequencies(N_bins, 0);
@@ -340,9 +340,9 @@ public:
 		}
 
 		// save to text file
-		std::vector<number_type> x(N_bins);
-		std::vector<number_type> y(N_bins);
-		std::vector<number_type> dy(N_bins);
+		assert(x.size() == y.size());
+		assert(y.size() == dy.size());
+		assert(dy.size() == N_bins);
 		for (size_type i = 0; i < x.size(); ++i)
 		{
 			x[i] = (edges[i+1]+edges[i])/2;
@@ -1627,7 +1627,7 @@ public:
 	// }
 
 	// generate output file with values of W(r) for each centrality class
-	void print_W(std::string filename_begin, bool error_column = true)
+	void print_W_all(std::string filename_begin, bool error_column = true)
 	{
 		for (size_type c = 1; c < percentiles_.size(); ++c) // loop over centrality classes
 		{

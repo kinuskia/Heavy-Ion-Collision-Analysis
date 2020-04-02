@@ -28,6 +28,7 @@ public:
 	FBDecomposition(
 	  Model<number_type> model
 	, number_type rMax
+	, size_type centrality_min
 	 )
 	: model_(model)
 	, rMax_(rMax)
@@ -38,6 +39,7 @@ public:
 	, N_discret_(25)
 	, b_percentiles_edges_(0)
 	, b_percentiles_prob_(0)
+	, centrality_min_(centrality_min)
 	{
 
 	}
@@ -84,20 +86,23 @@ public:
 	number_type integ_one_r(number_type r_lower, number_type r_upper);
 
 
-	// Getter for one-Point correlation function in polar coordinates
+	// Getter for one-Point correlation function in polar coordinates (fixed reaction plane phiR=0)
 	number_type OnePoint(number_type r, number_type phi)
 	{
 		number_type x = r*cos(phi);
 		number_type y = r*sin(phi);
-		number_type x1;
-		number_type y1;
-		number_type angle = 0;
-		x1 = x*cos(angle) + y*sin(angle);
-		y1 = (-1.)*x*sin(angle) + y*cos(angle);
-		x = x1;
-		y = y1;
 
-		return model_.OnePoint(x, y)/normalization_;
+		number_type result = 0;
+		for (size_type i = 0; i < 2; ++i) // integrate over impact parameter
+		{
+			number_type b = b_percentiles_edges_[centrality_min_ +i];
+			number_type f = model_.OnePoint(x, y, b)/normalization_*b_percentiles_prob_[centrality_min_+i];
+			result += f/2;
+		}
+		result *= (b_percentiles_edges_[centrality_min_+1]-b_percentiles_edges_[centrality_min_])*100.;
+	
+
+		return result;
 	}
 
 	// Read in data on impact parameter distribution
@@ -621,6 +626,77 @@ public:
 	// 	return result;
 	// }
 
+
+	// some methods to compute the FB-Decomposition of the One-Point function to account for centrality
+	
+	// integrate One-Point function at fixed phi_R=0 over r
+	number_type integ_r_One(int m, int l, number_type phi)
+	{
+		number_type result = 0; 
+		size_type N = 100;
+		for (size_type i = 0; i <= N; ++i)
+		{
+			number_type r = (rMax_-0.2)*i/N;
+			number_type f = r*Bessel(m, l, r)*OnePoint(r, phi);
+			if ((i==0) || (i==N))
+			{
+				result += f/2;
+			}
+			else
+			{
+				result += f;
+			}
+		}
+		result *= (rMax_-0.2)/N;
+		return result;
+	}
+
+	// now do Fourier decomposition of integ_r_One
+	number_type compute_background_bar(int m, int l)
+	{
+		// Compute FFT wrt. phi
+		number_type* fft;
+		fft = new number_type[Nm_];
+		for (size_type i = 0; i < Nm_; ++i)
+		{
+			number_type phi = 2.*pi_*i/Nm_;
+			fft[i] = integ_r_One(m, l, phi);
+		}
+		gsl_fft_real_radix2_transform(fft, 1, Nm_);
+
+		// Scale correctly
+		number_type result = fft[m]/Nm_/c(m, l);
+
+		return result;
+	}
+	// save all background coeffs once and for all in a matrix
+	void fill_background_bar_for(int mMax, int lMax)
+	{
+		get_Bessel_deriv_zeros(mMax+1, lMax);
+		background_bar_ = gsl_matrix_alloc(mMax+1, lMax);
+		for (size_type i = 0; i <= mMax; ++i)
+		{
+			for (size_type j = 0; j < lMax; ++j)
+			{
+				gsl_matrix_set(background_bar_, i, j, compute_background_bar(i, j+1));
+			}
+		}
+	}
+	// access matrix of background coeffs
+	number_type get_background_bar(int m, int l)
+	{
+		return gsl_matrix_get(background_bar_, m, l-1);
+	}
+
+	// print matrix of background coeffs
+	void print_background_bar(std::string filename)
+	{
+		to_file(filename, background_bar_);
+	}
+
+
+
+
 	// compute two-mode correlator <e_l1^(m1) e_l2^(m2)>
 	// using symmetries and first FFT then r-integration
 	number_type TwoMode_fast2(int m1, int l1, int m2, int l2, size_type centrality_min)
@@ -673,6 +749,24 @@ public:
 		{
 			result *= -1.0;
 		}
+
+		// add contribution from geometry
+		if (m1+m2 == 0)
+		{
+			if (m1 == 0 && l1 == 1 && l2 == 1)
+			{
+				result += 0;
+			}
+			else
+			{
+				result += get_background_bar(abs(m1), l1)*get_background_bar(abs(m2), l2);
+				if (m1 == 2 && l1 == 1 && l2 == 1)
+				{
+					std::cout << get_background_bar(abs(m1), l1)*get_background_bar(abs(m2), l2) << "\n";
+				}
+			}
+		}
+
 
 		return result;
 	}
@@ -976,6 +1070,11 @@ private:
 	std::vector<number_type> b_percentiles_prob_;
 
 	gsl_matrix* bessel_deriv_zeros_;
+
+	// background coefficients epsilon_bar
+	gsl_matrix* background_bar_;
+
+	size_type centrality_min_;
 
 };
 

@@ -40,7 +40,7 @@ for pp in range(0, len(percentiles)):
 		filename_trento_one = 'output/one_point_' + centrality_class +'.txt'
 
 		filename_Saclay_simple = "Saclay_simplified/output/"+centrality_class+"/two_point_random_connected_m_" + str(mode) + ".txt"
-		filename_Saclay = "Saclay/output/"+centrality_class+"/Nr41/Nm64/m1.0e-2/two_point_random_connected_m_" + str(mode) + ".txt"
+		filename_Saclay = "Saclay/output/"+centrality_class+"/Nr41/Nm64/m5.0e-3/two_point_random_connected_m_" + str(mode) + ".txt"
 
 		trento = np.loadtxt(filename_trento)
 		trento_error = np.loadtxt(filename_trento_error)
@@ -110,9 +110,13 @@ for pp in range(0, len(percentiles)):
 			y_trento_error[i] =abs(trento_error[i,i]) # WHAT ABOUT m=0 ?
 		axs[mode][pp].axhline(y=0, color ="black", linestyle="dashed", linewidth=1.0, zorder = 1)
 		axs[mode][pp].scatter(l, y_trento, s=100, color = colors[1], label="TrENTo", marker= "x", zorder = 3)
-		axs[mode][pp].scatter(l, y_saclay_simple, s=100, color = colors[3], label="magma", marker= "1", zorder = 3)
+		axs[mode][pp].scatter(l, y_saclay_simple, s=100, color = colors[3], label="magma", marker = "2", zorder = 3)
 		axs[mode][pp].scatter(l, y_saclay, s=100, color = colors[2], label="CGC large-$N_c$", marker= "*", zorder = 2)
 		axs[mode][pp].set_xticks([1,3,5,7])
+		if (mode%2 == 0):
+			axs[mode][pp].set_ylim(-0.2*y[-1], 1.2*y[-1])
+		else:
+			axs[mode][pp].set_ylim(1.2*y[-1], -0.2*y[-1])
 
 filename = "plots/two_point_modules_IPSM"   + ".pdf"
 handles, labels = axs[-1][-1].get_legend_handles_labels()

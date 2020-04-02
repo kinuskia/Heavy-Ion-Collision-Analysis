@@ -57,7 +57,7 @@ for mode in modes:
 	if (current_max_CGC > maximal_value_CGC):
 		maximal_value_CGC = current_max_CGC
 	#import Large_Nc profile
-	source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m1.0e-2/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+	source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m5.0e-3/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 	profile = np.loadtxt(source)
 	# # add geometry part
 	# source_one_point = 'output/one_point_'+centrality_class+'.txt'
@@ -163,7 +163,7 @@ for mode in modes:
 # plot Saclay diagrams
 for mode in modes:
 	#import two-point functions
-	source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m1.0e-2/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
+	source = 'Saclay/output/'+centrality_class+'/Nr41/Nm64/m5.0e-3/two_point_random_connected' + '_m_' + str(mode)  +'.txt'
 	profile = np.loadtxt(source)
 	# # add geometry part
 	# source_one_point = 'output/one_point_'+centrality_class+'.txt'

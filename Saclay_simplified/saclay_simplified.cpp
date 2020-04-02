@@ -26,25 +26,32 @@ int main (int argc, char* argv[]) // command-line input: centrality_min, central
 	number_type m_IR = std::stod(argv[3]);
 	number_type Qs0 = std::stod(argv[4]);
 	std::string destination = argv[5];
-	Model<number_type> model(m_IR, Qs0);
+	Model<number_type> model(m_IR, Qs0, 6.624, 0.549, 0.);
 	std::string centrality = std::to_string(centrality_min) +  "-" + std::to_string(centrality_max);
 
 
-	model.initialize_W("../output/weight_functions_"+centrality+".txt");
+	model.initialize_W("output/"+centrality+"/weight_functions_magma_"+centrality+".txt");
+
+
+	model.initialize_T();
+	model.print_T("thickness.txt");
+
 
 	//model.print_OnePoint(10);
 
 	// Set up Fourier-Bessel decomposition object
 	// with rMax = 10 as maximal radial integration length
-	FBDecompositionSimplified<number_type> decomposition(model, 9.604);
+	FBDecompositionSimplified<number_type> decomposition(model, 9.604, centrality_min);
+	decomposition.get_impact_parameter_distribution("../output/percentiles_b.txt");
 
 	decomposition.initialize();
-
-	decomposition.get_impact_parameter_distribution("../impact_param_from_thickness/percentiles.txt");
+	
 
 	// Compute <e_l1^(m)e_l2^(-m)> as a function of l
-	int mMax = 4;
-	int lMax = 10;
+	int mMax = 6;
+	int lMax = 20;
+	decomposition.fill_background_bar_for(mMax, lMax);
+	decomposition.print_background_bar(destination + "/background_coeffs_CGC_" + centrality + ".txt");
 
 	// // set reaction plane angle
 	// decomposition.set_reaction_plane_angle(0);
@@ -75,6 +82,13 @@ int main (int argc, char* argv[]) // command-line input: centrality_min, central
 
 		gsl_matrix_free(result);
 	}
+
+
+	// Save W(r) function
+	std::string filename_W = destination + "/weight_functions_magma_" + centrality + ".txt";
+	decomposition.print_W(filename_W, 200);
+
+	decomposition.print_Bessel_deriv_zeros(20, 50, destination+ "/bessel_d_0.txt");
 
 	// number_type phi = 0.29;
 	// number_type r = 9.31;

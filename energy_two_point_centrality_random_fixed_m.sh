@@ -1,6 +1,6 @@
 #!/bin/bash
 export DYLD_LIBRARY_PATH=/usr/local/boost_1_67_0/stage/lib
-cd /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion-Collision-Analysis
+#cd /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion-Collision-Analysis
 
 
 # Create the specific Trento script (name: PbPb.txt)

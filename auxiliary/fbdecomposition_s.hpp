@@ -32,6 +32,7 @@ public:
 	FBDecompositionSimplified(
 	  Model<number_type> model
 	, number_type rMax
+	, size_type centrality_min
 	 )
 	: model_(model)
 	, rMax_(rMax)
@@ -41,6 +42,7 @@ public:
 	, Nr_(50)
 	, b_percentiles_edges_(0)
 	, b_percentiles_prob_(0)
+	, centrality_min_(centrality_min)
 	{
 
 	}
@@ -75,20 +77,23 @@ public:
 	number_type integ_one_r(number_type r_lower, number_type r_upper);
 
 
-	// Getter for one-Point correlation function in polar coordinates
+	// Getter for one-Point correlation function in polar coordinates (fixed reaction plane phiR=0)
 	number_type OnePoint(number_type r, number_type phi)
 	{
 		number_type x = r*cos(phi);
 		number_type y = r*sin(phi);
-		number_type x1;
-		number_type y1;
-		number_type angle = 0;
-		x1 = x*cos(angle) + y*sin(angle);
-		y1 = (-1.)*x*sin(angle) + y*cos(angle);
-		x = x1;
-		y = y1;
 
-		return model_.OnePoint(x, y)/normalization_;
+		number_type result = 0;
+		for (size_type i = 0; i < 2; ++i) // integrate over impact parameter
+		{
+			number_type b = b_percentiles_edges_[centrality_min_ +i];
+			number_type f = model_.OnePoint(x, y, b)/normalization_*b_percentiles_prob_[centrality_min_+i];
+			result += f/2;
+		}
+		result *= (b_percentiles_edges_[centrality_min_+1]-b_percentiles_edges_[centrality_min_])*100.;
+	
+
+		return result;
 	}
 
 	// Read in data on impact parameter distribution
@@ -194,6 +199,7 @@ public:
 
 	number_type Bessel_zero(int m, size_type l)
 	{
+		assert(l != 0);
 		if (m < 0) // take absolute value of m
 		{
 			m = -m;
@@ -260,7 +266,7 @@ public:
 			
 			// compute integral over r at fixed phi
 			// using trapezoidal rule
-			size_type N = 25*2;
+			size_type N = 25*3;
 			number_type width = (rMax_-0.2)/N;
 			for (size_type j = 0; j <= N; ++j) // loop over r
 			{
@@ -289,6 +295,74 @@ public:
 		return result_impact;
 	}
 
+	// some methods to compute the FB-Decomposition of the One-Point function to account for centrality
+	
+	// integrate One-Point function at fixed phi_R=0 over r
+	number_type integ_r_One(int m, int l, number_type phi)
+	{
+		number_type result = 0; 
+		size_type N = 100;
+		for (size_type i = 0; i <= N; ++i)
+		{
+			number_type r = (rMax_-0.2)*i/N;
+			number_type f = r*Bessel(m, l, r)*OnePoint(r, phi);
+			if ((i==0) || (i==N))
+			{
+				result += f/2;
+			}
+			else
+			{
+				result += f;
+			}
+		}
+		result *= (rMax_-0.2)/N;
+		return result;
+	}
+
+	// now do Fourier decomposition of integ_r_One
+	number_type compute_background_bar(int m, int l)
+	{
+		// Compute FFT wrt. phi
+		number_type* fft;
+		fft = new number_type[Nm_];
+		for (size_type i = 0; i < Nm_; ++i)
+		{
+			number_type phi = 2.*pi_*i/Nm_;
+			fft[i] = integ_r_One(m, l, phi);
+		}
+		gsl_fft_real_radix2_transform(fft, 1, Nm_);
+
+		// Scale correctly
+		number_type result = fft[m]/Nm_/c(m, l);
+
+		return result;
+	}
+	// save all background coeffs once and for all in a matrix
+	void fill_background_bar_for(int mMax, int lMax)
+	{
+		get_Bessel_deriv_zeros(mMax+1, lMax);
+		background_bar_ = gsl_matrix_alloc(mMax+1, lMax);
+		for (size_type i = 0; i <= mMax; ++i)
+		{
+			for (size_type j = 0; j < lMax; ++j)
+			{
+				gsl_matrix_set(background_bar_, i, j, compute_background_bar(i, j+1));
+			}
+		}
+	}
+	// access matrix of background coeffs
+	number_type get_background_bar(int m, int l)
+	{
+		return gsl_matrix_get(background_bar_, m, l-1);
+	}
+
+	// print matrix of background coeffs
+	void print_background_bar(std::string filename)
+	{
+		to_file(filename, background_bar_);
+	}
+
+
 	// compute structure coefficient B_{l1l2}^{m1,m2, m } as a function of m
 	void get_B(int l1, int l2, int m1, int m2, size_type centrality_min, std::vector<number_type> & Bm)
 	{
@@ -303,6 +377,7 @@ public:
 		number_type* fft;
 		fft = new number_type[Nm_];
 
+	
 		for (size_type i = 0; i < Nm_; ++i)
 		{
 			number_type phi = 2.* pi_ * i / Nm_;
@@ -310,6 +385,8 @@ public:
 		}
 
 		gsl_fft_real_radix2_transform(fft, 1, Nm_);
+
+
 		
 		// save result
 		for (size_type i = 0; i < Nm_; ++i)
@@ -361,9 +438,51 @@ public:
 		{
 			result = Bm[-m];
 		}
+
+		// add contribution from geometry
+		if (m == 0)
+		{
+			if (m1 == 0 && l1 == 1 && l2 == 1)
+			{
+				result += 0;
+			}
+			else
+			{
+				result += get_background_bar(abs(m1), l1)*get_background_bar(abs(m2), l2);
+			}
+		}
+
+
 		
 		return result;
 
+	}
+
+
+
+
+	// generate output file with values of W(r)
+	void print_W(std::string filename, size_type Nr)
+	{
+		std::vector<std::vector<number_type>> Ws(2);
+		for (size_type i = 0; i < Nr; ++i) // loop over radii
+		{
+			number_type radius = (rMax_-0.2) * i / Nr;
+			(Ws[0]).push_back(radius);
+	
+			
+			(Ws[1]).push_back(W(radius));
+			
+		}
+
+		to_file(filename, Ws);
+	}
+
+	// print Bessel derivative zeros to text file
+	void print_Bessel_deriv_zeros(size_type m, size_type l, std::string filename)
+	{
+		get_Bessel_deriv_zeros(m, l);
+		to_file(filename, bessel_deriv_zeros_);
 	}
 
 
@@ -394,6 +513,11 @@ private:
 	std::vector<number_type> b_percentiles_prob_;
 
 	gsl_matrix* bessel_deriv_zeros_;
+
+	// background coefficients epsilon_bar
+	gsl_matrix* background_bar_;
+
+	size_type centrality_min_;
 
 };
 
