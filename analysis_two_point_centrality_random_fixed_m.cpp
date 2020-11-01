@@ -29,7 +29,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	//PbPb.normalize(1); // normalize events so that integral = 1
 
 
-	//PbPb.centralize(); // shift data so that barycentre at origin
+	PbPb.centralize(); // shift data so that barycentre at origin
 
 	// compute the respective multiplicity limits for specific centrality classes
 	std::vector<number_type> classes(101);
@@ -38,7 +38,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 		classes[i] = i; // centrality classes from 0 to 100 in 1% intervals
 	}
 	PbPb.get_percentiles(classes);
-	PbPb.centralize_centrality();
+	//PbPb.centralize_centrality();
 
 	//set interpolation method: gsl_interp2d_bicubic or gsl_interp2d_bilinear
 	const gsl_interp2d_type* xy_interpolation_method = gsl_interp2d_bicubic;
@@ -120,8 +120,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	number_type max_rel_error = -1.0; // variable to keep track of current relative error
 
-	size_type mMax = 10;
-	size_type lMax = 20;
+	size_type mMax = 4;
+	size_type lMax = 10;
 
 
 	for (int m = 0; m <= mMax; ++m)

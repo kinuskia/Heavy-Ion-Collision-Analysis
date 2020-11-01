@@ -33,10 +33,10 @@ for i in range(0, len(modes)):
 	for i in range(0, lMax):
 		l[i] = i+1
 	
-	plt.errorbar(l, profile[m, 0:], yerr=profile_error[m,0:], linestyle = 'none', elinewidth=2, capsize = 6, capthick = 2, color=colors[1])
-	plt.scatter(l, profile[m, 0:], s=30, color=colors[1], label = "TrENTo")
+	plt.errorbar(l, profile[m, 0:lMax], yerr=profile_error[m,0:], linestyle = 'none', elinewidth=2, capsize = 6, capthick = 2, color=colors[1])
+	plt.scatter(l, profile[m, 0:lMax], s=30, color=colors[1], label = "TrENTo")
 	#plt.plot(l, profile[m, 0:], color=colors[m])
-	plt.scatter(l, profile_magma[m, 0:], s=100, color=colors[2], label = "CGC", marker= "*")
+	plt.scatter(l, profile_magma[m, 0:lMax], s=100, color=colors[2], label = "CGC", marker= "*")
 	#plt.plot(l, profile_magma[m, 0:], color=colors[1])
 	plt.xlabel("$l$")
 	plt.ylabel("$\\bar{\\epsilon}_l^{("+str(m)+")}$")

@@ -5,21 +5,24 @@ import numpy as np
 
 #modes = [0, 1, 2, 3, 4, 5]
 #modes = [0, 1]
-percentiles = np.arange(100)
+#percentiles = np.arange(100)
+percentiles = [0, 20]
 counter_fig = 0
 
-colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+colors = ['#1f77b4', '#db6e0d', '#2ca02c', 'darkred', '#9467bd']
+linestyles = ["dashdot", "solid", "dotted", "solid", "dashed"]
 
 
-for p in range(0, len(percentiles)):
+for i in range(0, len(percentiles)):
+	p = percentiles[i]
 	counter_fig = counter_fig + 1
 	plt.figure(counter_fig)
 	plt.figure(figsize=(10,7.3))
 	plt.rcParams.update({'font.size': 23})
 	plt.rcParams['axes.titlepad'] = 10
-	source_result = 'output/one_point_' + str(percentiles[p]) + '-' + str(percentiles[p]+1)  +'.txt'
+	source_result = 'output/one_point_' + str(p) + '-' + str(p+1)  +'.txt'
 	profile = np.loadtxt(source_result)
-	source_error = 'output/one_point_' + str(percentiles[p]) + '-' + str(percentiles[p]+1) + '_error' +'.txt'
+	source_error = 'output/one_point_' + str(p) + '-' + str(p+1) + '_error' +'.txt'
 	profile_error = np.loadtxt(source_error)
 	mMax = 4
 	lMax = 10
@@ -27,15 +30,15 @@ for p in range(0, len(percentiles)):
 	for i in range(0, lMax):
 		l[i] = i+1
 	for m in range(0, mMax+1):
-		plt.errorbar(l, profile[m, 0:], yerr=profile_error[m,0:], linestyle = 'none', elinewidth=2, capsize = 6, capthick = 2, color=colors[m])
-		plt.scatter(l, profile[m, 0:], s=10, color=colors[m])
-		plt.plot(l, profile[m, 0:], color=colors[m], label = "$m="+str(m)+"$")
+		plt.errorbar(l, profile[m, 0:lMax], yerr=profile_error[m,0:], linestyle = 'none', elinewidth=2, capsize = 6, capthick = 2, color=colors[m])
+		plt.scatter(l, profile[m, 0:lMax], s=10, color=colors[m])
+		plt.plot(l, profile[m, 0:lMax], color=colors[m], label = "$m="+str(m)+"$", linestyle = linestyles[m])
 	plt.xlabel("$l$")
 	plt.ylabel("$\\bar{\\epsilon}_l^{(m)}$")
 	plt.legend(loc='best')
-	centrality_class = str(percentiles[p]) + '-' + str(percentiles[p]+1) + '%'
+	centrality_class = str(p) + '-' + str(p+1) + '%'
 	plt.title("$\\bar{\\epsilon}_l^{(m)}$, "+centrality_class)
-	filename = "plots/one_point_" + str(percentiles[p]) + "-" + str(percentiles[p]+1) + ".pdf"
+	filename = "plots/one_point_" + str(p) + "-" + str(p+1) + ".pdf"
 	plt.savefig(filename, format='pdf', bbox_inches = "tight")
 	plt.close(counter_fig)
 

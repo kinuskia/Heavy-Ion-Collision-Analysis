@@ -1,10 +1,11 @@
 #!/bin/bash
-export DYLD_LIBRARY_PATH=/usr/local/boost_1_67_0/stage/lib
+#export DYLD_LIBRARY_PATH=/usr/local/boost_1_67_0/stage/lib
+#export DYLD_LIBRARY_PATH=/usr/local/hdf5
 cd /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion-Collision-Analysis
 
 
 # Create the specific Trento script (name: PbPb.txt)
-NEVENTS=100000
+NEVENTS=1000
 NBINS=30
 #DESTINATION=/Volumes/MAC/Trento/PbPb$NEVENTS
 DESTINATION=Trento/PbPb$NEVENTS

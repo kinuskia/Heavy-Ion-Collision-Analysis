@@ -22,8 +22,8 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	Collision<number_type> PbPb(10, .2); // Create Collision object
 
 	
-	size_type lMax = 20; 
-	size_type mMax = 10;
+	size_type lMax = 10; 
+	size_type mMax = 4;
 
 	// Compute clm values
 	PbPb.get_Bessel_deriv_zeros(mMax+1, lMax+1);
@@ -44,7 +44,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	//PbPb.normalize(1); // normalize events so that integral = 1
 
 
-	//PbPb.centralize(); // shift data so that barycentre at origin
+	PbPb.centralize(); // shift data so that barycentre at origin
 
 	PbPb.getReactionPlane("output/angles.txt"); // compute reaction plane angles
 
@@ -61,7 +61,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 
 	PbPb.get_percentiles(classes);
 
-	PbPb.centralize_centrality();
+	//PbPb.centralize_centrality();
 
 	std::time_t current_time = std::time(nullptr);
 	std::cout << current_time-start << "s: " << "Data has been read in. \n"; 
@@ -89,7 +89,7 @@ int main (int argc, char* argv[]) // command-line input: filename_begin, filefor
 	PbPb.print_averaged_profiles("output/profiles_averaged", 100);
 
 	// print <e_m(r)> for all centrality classes
-	for (size_type m = 0; m < 5; ++m)
+	for (size_type m = 0; m < mMax; ++m)
 	{
 		for (size_type c = 1; c < classes.size(); ++c)
 		{

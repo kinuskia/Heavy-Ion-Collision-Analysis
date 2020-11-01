@@ -1,5 +1,6 @@
 #!/bin/bash
-export DYLD_LIBRARY_PATH=/usr/local/boost_1_67_0/stage/lib
+#export DYLD_LIBRARY_PATH=/usr/local/boost_1_67_0/stage/lib
+export DYLD_LIBRARY_PATH=/Users/kianusch/opt/anaconda3/lib/
 #cd /Users/Kianusch/Documents/Studium/Semester/WiSe1819/Bachelor-Arbeit/Heavy-Ion-Collision-Analysis
 
 
@@ -18,6 +19,6 @@ g++ -std=c++11 -O2 -o trento_generator trento_generator.cpp
 # Delete Trento script
 rm -rf PbPb.txt
 	
-# Evaluate centrality of Trento files with name Trento/PbPb.dat, 
+# # Evaluate centrality of Trento files with name Trento/PbPb.dat, 
 g++ -std=c++11 -lgsl -O2 -o OnePointCentrality analysis_one_point_centrality.cpp
 ./OnePointCentrality $DESTINATION .dat $NEVENTS
